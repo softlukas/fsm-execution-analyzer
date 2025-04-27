@@ -49,6 +49,10 @@ public:
     
     const std::string& DisplayTransition() const;
 
+    // --- Setters ---
+    void setCondition(const std::string& condition);
+    void setDelay(int delayMs);
+
     // We might add methods later to evaluate the condition, etc.
 
 private:

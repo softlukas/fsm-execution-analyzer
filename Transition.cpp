@@ -78,6 +78,14 @@ const std::string& Transition::DisplayTransition() const {
     return result;
 }
 
+// setter implementation
+void Transition::setCondition(const std::string& condition) {
+    this->condition = condition;
+}
+void Transition::setDelay(int delayMs) {
+    this->delayMs = delayMs;
+}
+
  
  // Implementations of other methods (like condition evaluation) will come later...
  

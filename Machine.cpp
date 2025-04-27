@@ -52,7 +52,7 @@ void Machine::addTransition(std::unique_ptr<Transition> transition) {
     transitions.push_back(std::move(transition)); // Move ownership into the vector
 }
 
-const Transition* Machine::getTransition(const int transitionId) const {
+Transition* Machine::getTransition(const int transitionId) const {
     for (const auto& transition : transitions) {
         if (transition->getTransitionId() == transitionId) {
             return transition.get(); // Return raw pointer from unique_ptr

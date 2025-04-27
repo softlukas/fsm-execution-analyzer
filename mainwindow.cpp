@@ -358,10 +358,58 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
     else if(lineItem) {
         qDebug() << "Line item clicked:";
         // Handle line item clicks if needed
-        const Transition *trans = machine->getTransition(lineItem->data(0).toInt());
+        Transition *trans = machine->getTransition(lineItem->data(0).toInt());
         if (trans) {
             
             qDebug() << QString::fromStdString(trans->DisplayTransition());
+
+            QDialog dialog(this);
+            dialog.setWindowTitle("Edit Transition Details");
+
+            QVBoxLayout layout(&dialog);
+
+            QLabel label1("Edit transition condition:", &dialog);
+            QLineEdit lineEdit1(&dialog);
+            lineEdit1.setText(QString::fromStdString(trans->getCondition())); // Pre-fill with current condition
+            layout.addWidget(&label1);
+            layout.addWidget(&lineEdit1);
+
+            QLabel label2("Edit transition delay:", &dialog);
+            QLineEdit lineEdit2(&dialog);
+            lineEdit2.setText(QString::number(trans->getDelayMs())); // Pre-fill with current delay
+            layout.addWidget(&label2);
+            layout.addWidget(&lineEdit2);
+
+            QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+            layout.addWidget(&buttonBox);
+
+            connect(&buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+            connect(&buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+            QString condition;
+            int delay = 0;
+
+            if (dialog.exec() == QDialog::Accepted) {
+                condition = lineEdit1.text().trimmed();
+                delay = lineEdit2.text().trimmed().toInt();
+
+                if (condition.isEmpty()) {
+                    qDebug() << "Dialog cancelled or empty input.";
+                    return;
+                }
+
+                qDebug() << "Updated transition condition:" << condition;
+                qDebug() << "Updated transition delay:" << delay;
+
+                // Update the transition object with new values
+                trans->setCondition(condition.toStdString());
+                trans->setDelay(delay);
+            } else {
+                qDebug() << "Dialog cancelled.";
+                return;
+            }
+
+
         } else {
             qDebug() << "Transition not found.";
         }
@@ -372,6 +420,8 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
 }
 
 std::string MainWindow::displayDialog(const std::string& textToDisplay) {
+
+    
     bool okClicked;
     QString input = QInputDialog::getText(this, "Enter " + QString::fromStdString(textToDisplay),
                                           QString::fromStdString(textToDisplay), QLineEdit::Normal,
