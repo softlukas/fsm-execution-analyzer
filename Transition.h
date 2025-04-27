@@ -4,6 +4,7 @@
 #include <string>
 #include <optional> // Or use empty strings / sentinel values for optional parts
 #include "State.h" // Include the State class header
+#include <iostream>
 /**
  * @brief Represents a transition between states in the interpreted finite automaton.
  * @authors Your Authors (xname01, xname02, xname03) // !!! FILL IN YOUR NAMES/LOGINS !!!
@@ -30,7 +31,7 @@ public:
      * @param sourceState Pointer to the source state object.
      * @param targetState Pointer to the target state object.
      */
-    Transition(State& sourceState, State& targetState, const std::string& condition = "", const int delayMs = 0);
+    Transition(State& sourceState, State& targetState, const int transitionId, const std::string& condition = "", const int delayMs = 0);
 
     // --- Getters ---
     const std::string& getSourceName() const;
@@ -41,7 +42,12 @@ public:
     const State& getTargetState() const;
     const int getDelayMs() const;
     const std::string& getCondition() const;
+
+    const int getTransitionId() const;
     
+    const Transition& getTransitionBasedOnId() const;
+    
+    const std::string& DisplayTransition() const;
 
     // We might add methods later to evaluate the condition, etc.
 
@@ -52,6 +58,7 @@ private:
     std::string guardCondition;     // Guard condition string (if any)
     std::string condition;
     int         delayMs;            // Delay in milliseconds (e.g., 0 or -1 for none)
+    const int transitionId;
     
 };
 

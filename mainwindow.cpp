@@ -228,9 +228,7 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
     qDebug() << "handleStateClick called. Adding transition mode:";
     qDebug() << "State item clicked:" << lineItem->data(0).toString();
 
-    if(addingTransitionMode == false) {
-        return;
-    }
+    
 
     qDebug() << "State item clicked:" << lineItem->data(0).toString();
 
@@ -320,8 +318,10 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
                     std::unique_ptr<Transition> newTransition = std::make_unique<Transition>(
                         *this->startStateForTransition,
                         *this->endStateForTransition,
+                        objectTransitionId++,
                         condition.toStdString(),
                         delay
+                         // Increment the transition ID for each new transition
                         ); // Defaults for now
     
                     machine->addTransition(std::move(newTransition));
@@ -356,8 +356,15 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
     
     }
     else if(lineItem) {
+        qDebug() << "Line item clicked:";
         // Handle line item clicks if needed
-        qDebug() << "Line item clicked:" << lineItem->data(0).toString();
+        const Transition *trans = machine->getTransition(lineItem->data(0).toInt());
+        if (trans) {
+            
+            qDebug() << QString::fromStdString(trans->DisplayTransition());
+        } else {
+            qDebug() << "Transition not found.";
+        }
     }
     else {
         qDebug() << "Clicked item is not a valid state or line item.";
@@ -399,7 +406,7 @@ void MainWindow::drawArrow(const QGraphicsItemGroup *start, const QGraphicsItemG
 
 
     mainLine->setPen(QPen(Qt::black, 2));
-    mainLine->setData(0, QVariant(1));
+    mainLine->setData(0, QVariant(objectTransitionId)); // Store transition ID in the line item
 
     scene->addItem(mainLine);
 

@@ -46,6 +46,7 @@ public:
     const std::map<std::string, std::unique_ptr<Input>>& getInputs() const;
     const std::map<std::string, std::unique_ptr<Output>>& getOutputs() const;
     const std::vector<std::unique_ptr<Transition>>& getTransitions() const;
+    const Transition* getTransition(const int transitionId) const;
 
     // --- Methods for interacting during runtime (to be used by interpreter/monitor) ---
     bool setVariableValue(const std::string& name, const std::string& value);

@@ -126,6 +126,7 @@ private:
     Machine *machine = nullptr; // Pointer to the machine instance (if needed)
     State *startStateForTransition = nullptr; // Pointer to the start state (if needed)
     State *endStateForTransition = nullptr;   // Pointer to the end state (if needed)
+    int objectTransitionId = 0;
 };
 
 #endif // MAINWINDOW_H
