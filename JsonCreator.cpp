@@ -31,7 +31,7 @@ bool JsonCreator::saveToFile(const Machine& machine, const QString& filename) {
     // --- Add basic machine info ---
     rootObject["jmenoAutomatu"] = QString::fromStdString(machine.getName());
     rootObject["komentar"] = "Automat vygenerovaný nástrojom"; // Placeholder
-    /*
+    
     // --- Add Inputs ---
     QJsonArray inputsArray;
     for (const auto& pair : machine.getInputs()) {
@@ -47,17 +47,22 @@ bool JsonCreator::saveToFile(const Machine& machine, const QString& filename) {
     rootObject["vystupy"] = outputsArray;
 
     // --- Add Variables ---
+    
     QJsonArray variablesArray;
+    // Iterate through the map of variables stored in the machine object
     for (const auto& pair : machine.getVariables()) {
-        const Variable* var = pair.second.get();
-        QJsonObject varObject;
-        varObject["jmeno"] = QString::fromStdString(var->getName());
+        const Variable* var = pair.second.get(); // Get the raw pointer from unique_ptr
+        QJsonObject varObject; // Create a JSON object for this variable
+        // Add key-value pairs for the variable's properties
+        varObject["jmeno"] = QString::fromStdString(var->getName()); // Use "jmeno" to match example format
         varObject["typ"] = QString::fromStdString(var->getTypeHint());
         varObject["hodnota"] = QString::fromStdString(var->getValueAsString());
+        // Append the variable object to the JSON array
         variablesArray.append(varObject);
     }
-    rootObject["promenne"] = variablesArray;
-    */
+    // Assign the (now potentially filled) array to the root object
+    rootObject["promenne"] = variablesArray; // Use "promenne" to match example format
+    
     // --- Add States ---
     QJsonArray statesArray;
     const State* initialStatePtr = machine.getInitialState();

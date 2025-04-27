@@ -70,6 +70,8 @@ private slots:
     void on_saveJsonButton_clicked();
     void on_loadJsonButton_clicked();
 
+    
+
 
     // If NOT using custom GraphicsView with stateItemClicked signal,
     // use this slot connected to scene's selectionChanged signal instead:
@@ -109,6 +111,8 @@ private:
      * @return A string containing the user's response or an empty string if no response is provided.
      */
     std::string displayDialog(const std::string& textToDisplay);
+
+    void ParseVariableArguments(const std::string& userInput);
 
     //void createTransition(const std::string& startStateName, const std::string& endStateName);
     

@@ -17,7 +17,8 @@ SOURCES += \
     # AutomatonLoader.cpp # Add this if you use it instead of Machine.cpp
     Machine.cpp \
     GraphicsView.cpp \
-    JsonCreator.cpp# As seen in the image, maybe rename/replace later?
+    JsonCreator.cpp \
+    MachineElement.cpp \# As seen in the image, maybe rename/replace later?
     # Add any other .cpp files here
 
 # List all header files explicitly
@@ -31,7 +32,9 @@ HEADERS += \
     # AutomatonLoader.h # Add this if you use it instead of Machine.h
     Machine.h \
     GraphicsView.h \
-    JsonCreator.h# As seen in the image, maybe rename/replace later?
+    JsonCreator.h \
+    MachineElement.h \
+    # As seen in the image, maybe rename/replace later?
     # Add any other .h files here
 
 # List all UI form files explicitly

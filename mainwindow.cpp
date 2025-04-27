@@ -24,6 +24,7 @@
 #include <QDialogButtonBox> // Needed for QDialogButtonBox
 #include <QDebug>
 #include <exception>
+#include <sstream> // Needed for std::istringstream
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -57,6 +58,9 @@ MainWindow::~MainWindow() {
 
 void MainWindow::on_saveJsonButton_clicked() {
     qDebug() << "Save JSON button clicked.";
+
+    JsonCreator::saveToFile(*machine, "automaton.json");
+
     // Save JSON file logic here
     // Use JsonCreator::saveToFile(machine, filename) to save the machine to a file
     // Example: JsonCreator::saveToFile(*machine, "machine.json");
@@ -66,6 +70,7 @@ void MainWindow::on_saveJsonButton_clicked() {
 
 void MainWindow::on_loadJsonButton_clicked() {
     qDebug() << "Load JSON button clicked.";
+
     // Load JSON file logic here
     // Use JsonCreator::saveToFile(machine, filename) to save the machine to a file
     // Example: JsonCreator::saveToFile(*machine, "machine.json");
@@ -73,27 +78,70 @@ void MainWindow::on_loadJsonButton_clicked() {
 }
 
 void MainWindow::on_addVariableButton_clicked() {
-    qDebug() << "Load JSON button clicked.";
-    // Load JSON file logic here
-    // Use JsonCreator::saveToFile(machine, filename) to save the machine to a file
-    // Example: JsonCreator::saveToFile(*machine, "machine.json");
-    // Handle errors and display messages as needed
+    qDebug() << "Add variable button clicked.";
+
+    std::string input = displayDialog("Enter variable name:");
+    if (input.empty()) {
+        qDebug() << "Dialog cancelled or empty input.";
+        return;
+    }
+    qDebug() << "Variable name:" << QString::fromStdString(input);
+    
+    ParseVariableArguments(input);
+}
+
+void MainWindow::ParseVariableArguments(const std::string& userInput) {
+    // Split the input string by spaces
+    std::istringstream iss(userInput);
+    std::string name, type, value;
+    iss >> name >> type >> value;
+
+    // Check if all parts are present
+    if (name.empty() || type.empty() || value.empty()) {
+        qDebug() << "Invalid input format. Expected: <name> <type> <value>";
+        return;
+    }
+
+    // Create a new Variable object
+    std::unique_ptr<Variable> newVariable = std::make_unique<Variable>(name, type, value);
+
+    // Add the variable to the machine
+    try {
+        machine->addVariable(std::move(newVariable));
+        qDebug() << "Variable added to Automaton model:" << QString::fromStdString(name);
+    } catch (const std::exception& e) {
+        qCritical() << "Error adding variable to automaton:" << e.what();
+        QMessageBox::critical(this, "Model Error", QString("Failed to add variable to model: %1").arg(e.what()));
+        return;
+    }
 }
 
 void MainWindow::on_addInputButton_clicked() {
-    qDebug() << "Load JSON button clicked.";
-    // Load JSON file logic here
-    // Use JsonCreator::saveToFile(machine, filename) to save the machine to a file
-    // Example: JsonCreator::saveToFile(*machine, "machine.json");
-    // Handle errors and display messages as needed
+    qDebug() << "Input button clicked.";
+
+    std::string inputName = displayDialog("Enter variable name:");
+    if (inputName.empty()) {
+        qDebug() << "Dialog cancelled or empty input.";
+        return;
+    }
+    std::unique_ptr<Input> newInput = std::make_unique<Input>(inputName);
+    machine->addInput(std::move(newInput));
+    qDebug() << "Input name:" << QString::fromStdString(inputName);
 }
 
 void MainWindow::on_addOutputButton_clicked() {
-    qDebug() << "Load JSON button clicked.";
-    // Load JSON file logic here
-    // Use JsonCreator::saveToFile(machine, filename) to save the machine to a file
-    // Example: JsonCreator::saveToFile(*machine, "machine.json");
-    // Handle errors and display messages as needed
+    
+    qDebug() << "Input button clicked.";
+
+    std::string outputName = displayDialog("Enter variable name:");
+    if (outputName.empty()) {
+        qDebug() << "Dialog cancelled or empty input.";
+        return;
+    }
+
+    std::unique_ptr<Output> newOutput = std::make_unique<Output>(outputName);
+    machine->addOutput(std::move(newOutput));
+    qDebug() << "Input name:" << QString::fromStdString(outputName);
 }
 
 
@@ -135,7 +183,7 @@ void MainWindow::on_addStateButton_clicked() {
 
     if (dialog.exec() == QDialog::Accepted) {
         stateName = lineEdit1.text().trimmed();
-        stateAction = lineEdit2.text().trimmed().toInt();
+        stateAction = lineEdit2.text().trimmed();
 
         if (stateName.isEmpty()) {
             qDebug() << "Dialog cancelled or empty input.";
@@ -342,7 +390,7 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
                 return;
             }
 
-            JsonCreator::saveToFile(*machine, "automaton.json");
+            
 
             // --- Reset state ---
             unhighlightItem(startItemForTransition);
