@@ -29,22 +29,22 @@ bool JsonCreator::saveToFile(const Machine& machine, const QString& filename) {
     QJsonObject rootObject;
 
     // --- Add basic machine info ---
-    rootObject["jmenoAutomatu"] = QString::fromStdString(machine.getName());
-    rootObject["komentar"] = "Automat vygenerovaný nástrojom"; // Placeholder
+    rootObject["Automat name"] = QString::fromStdString(machine.getName());
+    //rootObject["komentar"] = "Automat vygenerovaný nástrojom"; // Placeholder
     
     // --- Add Inputs ---
     QJsonArray inputsArray;
     for (const auto& pair : machine.getInputs()) {
         inputsArray.append(QString::fromStdString(pair.second->getName()));
     }
-    rootObject["vstupy"] = inputsArray;
+    rootObject["inputs"] = inputsArray;
 
     // --- Add Outputs ---
     QJsonArray outputsArray;
     for (const auto& pair : machine.getOutputs()) {
         outputsArray.append(QString::fromStdString(pair.second->getName()));
     }
-    rootObject["vystupy"] = outputsArray;
+    rootObject["outputs"] = outputsArray;
 
     // --- Add Variables ---
     
@@ -54,14 +54,14 @@ bool JsonCreator::saveToFile(const Machine& machine, const QString& filename) {
         const Variable* var = pair.second.get(); // Get the raw pointer from unique_ptr
         QJsonObject varObject; // Create a JSON object for this variable
         // Add key-value pairs for the variable's properties
-        varObject["jmeno"] = QString::fromStdString(var->getName()); // Use "jmeno" to match example format
-        varObject["typ"] = QString::fromStdString(var->getTypeHint());
-        varObject["hodnota"] = QString::fromStdString(var->getValueAsString());
+        varObject["type"] = QString::fromStdString(var->getTypeHint());
+        varObject["name"] = QString::fromStdString(var->getName()); // Use "jmeno" to match example format
+        varObject["value"] = QString::fromStdString(var->getValueAsString());
         // Append the variable object to the JSON array
         variablesArray.append(varObject);
     }
     // Assign the (now potentially filled) array to the root object
-    rootObject["promenne"] = variablesArray; // Use "promenne" to match example format
+    rootObject["variables"] = variablesArray; // Use "promenne" to match example format
     
     // --- Add States ---
     QJsonArray statesArray;
@@ -72,12 +72,12 @@ bool JsonCreator::saveToFile(const Machine& machine, const QString& filename) {
         const State* state = pair.second.get();
         QJsonObject stateObject;
         QString currentName = QString::fromStdString(state->getName());
-        stateObject["jmeno"] = currentName;
-        stateObject["akce"] = QString::fromStdString(state->getAction());
-        stateObject["pocatecni"] = (currentName == initialStateName); // Simplified boolean assignment
+        stateObject["name"] = currentName;
+        stateObject["action"] = QString::fromStdString(state->getAction());
+        stateObject["start"] = (currentName == initialStateName); // Simplified boolean assignment
         statesArray.append(stateObject);
     }
-    rootObject["stavy"] = statesArray;
+    rootObject["states"] = statesArray;
     
 
     // --- Add Transitions ---
@@ -85,8 +85,8 @@ bool JsonCreator::saveToFile(const Machine& machine, const QString& filename) {
     for (const auto& transitionPtr : machine.getTransitions()) {
         const Transition* trans = transitionPtr.get();
         QJsonObject transObject;
-        transObject["zdroj"] = QString::fromStdString(trans->getSourceState().getName());
-        transObject["cil"] = QString::fromStdString(trans->getTargetState().getName());
+        transObject["source"] = QString::fromStdString(trans->getSourceState().getName());
+        transObject["target"] = QString::fromStdString(trans->getTargetState().getName());
         transObject["condition"] = QString::fromStdString(trans->getCondition());
         transObject["delay"] = QString::number(trans->getDelayMs());
 
@@ -104,7 +104,7 @@ bool JsonCreator::saveToFile(const Machine& machine, const QString& filename) {
 
         transitionsArray.append(transObject);
     }
-    rootObject["prechody"] = transitionsArray;
+    rootObject["transitions"] = transitionsArray;
     
     // --- Convert the root object to a JSON document ---
     QJsonDocument jsonDoc(rootObject);

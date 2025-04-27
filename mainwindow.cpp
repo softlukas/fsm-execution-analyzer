@@ -1,5 +1,5 @@
 // Needed includes:
-#include "MainWindow.h"
+#include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "Machine.h"
 #include "State.h"
@@ -93,8 +93,8 @@ void MainWindow::on_addVariableButton_clicked() {
 void MainWindow::ParseVariableArguments(const std::string& userInput) {
     // Split the input string by spaces
     std::istringstream iss(userInput);
-    std::string name, type, value;
-    iss >> name >> type >> value;
+    std::string type, name, value;
+    iss >> type >> name >> value;
 
     // Check if all parts are present
     if (name.empty() || type.empty() || value.empty()) {
@@ -103,7 +103,7 @@ void MainWindow::ParseVariableArguments(const std::string& userInput) {
     }
 
     // Create a new Variable object
-    std::unique_ptr<Variable> newVariable = std::make_unique<Variable>(name, type, value);
+    std::unique_ptr<Variable> newVariable = std::make_unique<Variable>(name, value, type);
 
     // Add the variable to the machine
     try {
