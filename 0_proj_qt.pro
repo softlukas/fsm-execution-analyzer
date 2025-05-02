@@ -17,8 +17,10 @@ SOURCES += \
     # AutomatonLoader.cpp # Add this if you use it instead of Machine.cpp
     Machine.cpp \
     GraphicsView.cpp \
-    JsonCreator.cpp \
+    JsonPersistance.cpp \
     MachineElement.cpp \# As seen in the image, maybe rename/replace later?
+    json_conversions.cpp \
+    CodeGenerator.cpp \
     # Add any other .cpp files here
 
 # List all header files explicitly
@@ -32,8 +34,10 @@ HEADERS += \
     # AutomatonLoader.h # Add this if you use it instead of Machine.h
     Machine.h \
     GraphicsView.h \
-    JsonCreator.h \
+    JsonPersistance.h \
     MachineElement.h \
+    json_conversions.h \
+    CodeGenerator.h \
     # As seen in the image, maybe rename/replace later?
     # Add any other .h files here
 
@@ -45,6 +49,10 @@ FORMS += \
 # No need for explicit INCLUDEPATH for the project root directory,
 # qmake/compiler usually search here by default.
 # INCLUDEPATH += . # Optionally add current directory if needed
+
+INCLUDEPATH += \
+    $$PWD/third_party/asio/include \  
+    $$PWD/third_party      
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
