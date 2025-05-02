@@ -103,7 +103,7 @@ private:
 
     void editTransition();
 
-    void editState(const std::string& stateName);
+    void editState(QGraphicsItemGroup *item);
    
     /**
      * @brief Displays a dialog with the specified text.
@@ -117,6 +117,12 @@ private:
     std::string displayDialog(const std::string& textToDisplay);
 
     void ParseVariableArguments(const std::string& userInput);
+
+    void ProccessInputEditDialog(const std::string& title, const std::string& label1Text, const std::string& label2Text, 
+        std::string& predefinedInput1, std::string& predifinedInput, 
+        std::string* newInput1, std::string* newInput2);
+
+    void setElipseText(QGraphicsEllipseItem* ellipseItem, const std::string& text);
 
     //void createTransition(const std::string& startStateName, const std::string& endStateName);
     

@@ -29,3 +29,7 @@ void State::setAction(const std::string& action) {
     stateOutput = action;
 }
 
+const int State::getStateId() const {
+    return stateId;
+}
+

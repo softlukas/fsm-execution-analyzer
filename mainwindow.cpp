@@ -25,6 +25,7 @@
 #include <QDebug>
 #include <exception>
 #include <sstream> // Needed for std::istringstream
+#include <QtMath> // Needed for qDegreesToRadians
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -59,7 +60,7 @@ MainWindow::~MainWindow() {
 void MainWindow::on_saveJsonButton_clicked() {
     qDebug() << "Save JSON button clicked.";
 
-    JsonCreator::saveToFile(*machine, "automaton.json");
+    //JsonCreator::saveToFile(*machine, "automaton.json");
 
     // Save JSON file logic here
     // Use JsonCreator::saveToFile(machine, filename) to save the machine to a file
@@ -209,6 +210,8 @@ void MainWindow::on_addStateButton_clicked() {
     ellipse->setBrush(QBrush(Qt::cyan));
     ellipse->setPen(QPen(Qt::black));
 
+    setElipseText(ellipse, stateName.toStdString());
+
     QGraphicsTextItem *text = new QGraphicsTextItem(stateName);
     QRectF textRect = text->boundingRect();
     qreal textX = (width - textRect.width()) / 2;
@@ -221,12 +224,13 @@ void MainWindow::on_addStateButton_clicked() {
     group->setPos(x, y);
     group->setFlag(QGraphicsItem::ItemIsMovable);
     group->setFlag(QGraphicsItem::ItemIsSelectable);
-    group->setData(0, QVariant(stateName));
+    group->setData(0, QVariant(objectStateId)); // Store the state ID in the group
+    group->setData(1, "state"); // Store the state name in the group
 
     scene->addItem(group);
 
-    std::unique_ptr<State> newState = std::make_unique<State>(stateName.toStdString(), stateAction.toStdString());
-
+    std::unique_ptr<State> newState = std::make_unique<State>(stateName.toStdString(), stateAction.toStdString(), objectStateId);
+    objectStateId++;
     // Add the state to the automaton
     try {
         machine->addState(std::move(newState));
@@ -282,8 +286,16 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
 
     // Check if a valid state item was clicked (item is not nullptr)
     
+
+    
     if (item) {
         
+        // edit state
+        if(!addingTransitionMode && item->data(1).toString() == "state") {
+            editState(item);
+            return;
+        }
+
         
         //highlightItem(item); // Highlight the clicked item
 
@@ -292,7 +304,7 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
             // --- First click: Selecting the start state ---
             startItemForTransition = item;
             highlightItem(startItemForTransition); // Highlight the selected start state
-            this->startStateForTransition = machine->getState(item->data(0).toString().toStdString());
+            this->startStateForTransition = machine->getState(item->data(0).toInt());
             if(this->startStateForTransition) {
                 qDebug() << "Start state selected:" << QString::fromStdString(this->startStateForTransition->getName());
             } else {
@@ -307,7 +319,7 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
         {
             endItemForTransition = item;
             highlightItem(endItemForTransition); // Highlight the selected end state
-            this->endStateForTransition = machine->getState(item->data(0).toString().toStdString());
+            this->endStateForTransition = machine->getState(item->data(0).toInt());
             if (this->endStateForTransition) {
                 qDebug() << "End state selected:" << QString::fromStdString(this->endStateForTransition->getName());
             } else {
@@ -354,25 +366,22 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
                 qDebug() << "Dialog cancelled.";
                 return;
             }
-
-
-            
-
            
-            drawArrow(startItemForTransition, endItemForTransition, QString::fromStdString(condition.toStdString()));
+            drawArrow(startItemForTransition, endItemForTransition, QString::fromStdString(condition.toStdString()), objectTransitionId);
             
             try {
                 if(this->startStateForTransition && this->endStateForTransition) {
                     std::unique_ptr<Transition> newTransition = std::make_unique<Transition>(
                         *this->startStateForTransition,
                         *this->endStateForTransition,
-                        objectTransitionId++,
+                        objectTransitionId,
                         condition.toStdString(),
                         delay
                          // Increment the transition ID for each new transition
                         ); // Defaults for now
     
                     machine->addTransition(std::move(newTransition));
+                    objectTransitionId++;
                     qDebug() << "Transition added to Automaton model:" 
                             << QString::fromStdString(this->startStateForTransition->getName()) 
                             << "->" 
@@ -467,6 +476,166 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
     }
 }
 
+void editTransition(int transitionId) {
+    // Placeholder for editing transition logic
+    qDebug() << "Edit transition function called.";
+    // Implement the logic to edit the selected transition
+}
+
+void MainWindow::editState(QGraphicsItemGroup *item) {
+
+    int stateId = item->data(0).toInt(); // Retrieve the state ID stored in the item
+    State* state = machine->getState(stateId); // Get the state object using the ID
+    if (!state) {
+        qDebug() << "State not found for ID:" << stateId;
+        return;
+    }
+    
+
+
+    
+    std::string newName;
+    std::string newAction;
+    
+    std::string currentName = state->getName();
+    std::string currentAction = state->getAction();
+    
+
+    ProccessInputEditDialog("Edit State", "Enter new state name:", "Enter new action:",
+        currentName, currentAction, &newName, &newAction);
+
+    qDebug () << "New name:" << QString::fromStdString(newName);
+
+    state->setName(newName);
+    state->setAction(newAction);
+
+
+
+    // --- Aktualizácia grafického prvku ---
+    // 1. Nájdi QGraphicsTextItem v skupine
+    QGraphicsTextItem *textItem = nullptr;
+    for (QGraphicsItem *child : item->childItems()) {
+        textItem = dynamic_cast<QGraphicsTextItem*>(child);
+        if (textItem) {
+            break; // Našli sme ho
+        }
+    }
+
+    if (textItem) {
+        // 2. Zmeň zobrazený text
+        QString newNameQt = QString::fromStdString(newName); // Použi nové meno z dialógu
+        textItem->setPlainText(newNameQt);
+        qDebug () <<"new name qt" << newNameQt;
+
+        // 3. Aktualizuj uložené dáta v skupine (ak si menil meno)
+        //item->setData(0, QVariant(newNameQt)); // Ulož NOVÉ meno pod kľúčom 0
+
+        // 4. Prerátaj pozíciu textu, aby bol vycentrovaný
+        //    Potrebujeme nájsť aj elipsu na získanie rozmerov
+        QGraphicsEllipseItem* ellipseItem = nullptr;
+         for (QGraphicsItem *child : item->childItems()) {
+            ellipseItem = dynamic_cast<QGraphicsEllipseItem*>(child);
+            if (ellipseItem) {
+                break;
+            }
+        }
+        setElipseText(ellipseItem, newName);
+        /*
+        if(ellipseItem) {
+            QRectF ellipseRect = ellipseItem->rect(); // Získaj rozmery elipsy
+            QRectF textRect = textItem->boundingRect();
+            qreal textX = (ellipseRect.width() - textRect.width()) / 2;
+            qreal textY = (ellipseRect.height() - textRect.height()) / 2;
+            textItem->setPos(textX, textY); // Nastav novú pozíciu textu
+        } else {
+             qWarning() << "Could not find ellipse item within the group to recenter text.";
+        }
+        */
+
+        qDebug() << "State item text updated to:" << newNameQt;
+    } else {
+        qWarning() << "Could not find text item within the group to update.";
+    }
+
+    
+    
+
+    
+    //newName = QString::fromStdString(updatedName);
+    //newAction = QString::fromStdString(updatedAction);
+            /*
+            
+            qDebug() << "State updated: Name =" << newName << ", Action =" << newAction;
+        } else {
+            qDebug() << "Dialog cancelled.";
+        }
+    } else {
+        //qDebug() << "State not found with name:" << QString::fromStdString(stateId);
+    }
+        */
+        
+}
+
+void MainWindow::setElipseText(QGraphicsEllipseItem* ellipseItem, const std::string& text) {
+    if (!ellipseItem) {
+        qWarning() << "Cannot set text: Invalid ellipse item.";
+        return;
+    }
+
+    QGraphicsTextItem* textItem = new QGraphicsTextItem(QString::fromStdString(text));
+    QRectF textRect = textItem->boundingRect();
+    qreal textX = (ellipseItem->rect().width() - textRect.width()) / 2;
+    qreal textY = (ellipseItem->rect().height() - textRect.height()) / 2;
+    textItem->setPos(textX, textY);
+}
+
+
+void MainWindow::ProccessInputEditDialog(const std::string& title, const std::string& label1Text, const std::string& label2Text, 
+    std::string& predefinedInput1, std::string& predefinedInput2, 
+    std::string* newInput1, std::string* newInput2) {
+
+        QDialog dialog(this);
+        dialog.setWindowTitle(QString::fromStdString(title));
+
+        QVBoxLayout layout(&dialog);
+
+        QLabel label1(QString::fromStdString(label1Text), &dialog);
+        QLineEdit lineEdit1(&dialog);
+        lineEdit1.setText(QString::fromStdString(predefinedInput1)); // Pre-fill with current name
+        layout.addWidget(&label1);
+        layout.addWidget(&lineEdit1);
+
+        QLabel label2(QString::fromStdString(label2Text), &dialog);
+        QLineEdit lineEdit2(&dialog);
+        lineEdit2.setText(QString::fromStdString(predefinedInput2)); // Pre-fill with current action
+        layout.addWidget(&label2);
+        layout.addWidget(&lineEdit2);
+
+        QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        layout.addWidget(&buttonBox);
+
+        connect(&buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(&buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+        if (dialog.exec() == QDialog::Accepted) {
+            *newInput1 = lineEdit1.text().trimmed().toStdString();
+            *newInput2 = lineEdit2.text().trimmed().toStdString();
+        } else {
+            *newInput1 = QString().toStdString();
+            *newInput2 = QString().toStdString();
+        }
+
+
+
+
+}
+
+
+
+
+
+
+
 std::string MainWindow::displayDialog(const std::string& textToDisplay) {
 
     
@@ -493,48 +662,136 @@ std::string MainWindow::displayDialog(const std::string& textToDisplay) {
  * @param start The starting point of the arrow.
  * @param end The ending point of the arrow.
  */
-void MainWindow::drawArrow(const QGraphicsItemGroup *start, const QGraphicsItemGroup *end, const QString &label) {
-    // Calculate the line between start and end
-    QPointF startCenter = start->sceneBoundingRect().center();
-    QPointF endCenter = end->sceneBoundingRect().center();
-    QLineF line(startCenter, endCenter);
+void MainWindow::drawArrow(const QGraphicsItemGroup *start, const QGraphicsItemGroup *end, const QString &label, int transitionId) {
+    if (!scene || !start || !end) {
+        qWarning() << "Cannot draw arrow: Invalid scene or start/end item.";
+        return;
+    }
 
-    // Draw the main line
-    QGraphicsLineItem* mainLine = new QGraphicsLineItem(line);
+    // --- Common Arrow Properties ---
+    QPen arrowPen(Qt::red, 2); // Pen for the arrow line and head
+    qreal arrowSize = 10;      // Size of the arrowhead
+
+    // --- Create a group for the entire transition representation ---
+    // This group will contain the line/curve, arrowhead(s), and label.
+    QGraphicsItemGroup *arrowGroup = new QGraphicsItemGroup();
+
+    // --- Store Transition ID in the group ---
+     // Item type identifier
+    arrowGroup->setData(0, QVariant(transitionId)); // Store the actual transition ID
+    arrowGroup->setData(1, "Transition");
+
+    if (start == end) {
+        // --- Draw Self-Loop (Arc) ---
+        qDebug() << "Drawing self-loop for state:" << start->data(0).toString() << "ID:" << transitionId;
+
+        QRectF bounds = start->sceneBoundingRect(); // Get bounds of the state group
+        qreal radiusX = bounds.width() / 1.5; // Horizontal radius of the loop
+        qreal radiusY = bounds.height() / 1.5; // Vertical radius of the loop
+        QPointF center = bounds.center();
+        // Position the loop slightly above the state
+        QPointF loopTopCenter(center.x(), bounds.top() - radiusY * 0.8);
+
+        // Create the path for the arc (ellipse segment)
+        QPainterPath loopPath;
+        // Start angle and span angle for QPainterPath::arcTo
+        // Angles are in degrees, 0 is at 3 o'clock, positive is counter-clockwise
+        // We want an arc mostly above the state
+        qreal startAngle = 210; // Start slightly left of bottom
+        qreal spanAngle = -240; // Go counter-clockwise almost full circle
+        QRectF arcRect(loopTopCenter.x() - radiusX, loopTopCenter.y() - radiusY, 2 * radiusX, 2 * radiusY);
+        loopPath.arcMoveTo(arcRect, startAngle);
+        loopPath.arcTo(arcRect, startAngle, spanAngle);
+
+        // Create a QGraphicsPathItem for the loop
+        QGraphicsPathItem* loopItem = new QGraphicsPathItem(loopPath);
+        loopItem->setPen(arrowPen);
+        arrowGroup->addToGroup(loopItem); // Add arc to the group
+
+        // --- Calculate Arrowhead for the loop ---
+        // Get the end point and angle of the arc path
+        QPointF loopEnd = loopPath.currentPosition();
+        qreal angle = loopPath.angleAtPercent(1.0); // Angle at the end of the path
+
+        
+
+        QPointF arrowP1 = loopEnd + QPointF(qSin(qDegreesToRadians(-angle) + M_PI / 3) * arrowSize,
+                            qCos(qDegreesToRadians(-angle) + M_PI / 3) * arrowSize);
+        QPointF arrowP2 = loopEnd + QPointF(qSin(qDegreesToRadians(-angle) + M_PI - M_PI / 3) * arrowSize,
+                            qCos(qDegreesToRadians(-angle) + M_PI - M_PI / 3) * arrowSize);
+
+        QPolygonF arrowHead;
+        arrowHead << loopEnd << arrowP1 << arrowP2;
+        QGraphicsPolygonItem *arrowHeadItem = new QGraphicsPolygonItem(arrowHead);
+        arrowHeadItem->setPen(arrowPen);
+        arrowHeadItem->setBrush(Qt::red); // Fill the arrowhead
+        arrowGroup->addToGroup(arrowHeadItem); // Add arrowhead to the group
+
+        // --- Position Label for the loop ---
+        // Place the label above the loop's highest point
+        QGraphicsTextItem* text = new QGraphicsTextItem(label);
+        QRectF textRect = text->boundingRect();
+        text->setPos(loopTopCenter.x() - textRect.width() / 2, loopTopCenter.y() - radiusY - textRect.height() - 2);
+        arrowGroup->addToGroup(text); // Add label to the group
+
+    } else {
+        // --- Draw Straight Arrow ---
+        qDebug() << "Drawing straight arrow from" << start->data(0).toString() << "to" << end->data(0).toString() << "ID:" << transitionId;
+
+        QPointF startCenter = start->sceneBoundingRect().center();
+        QPointF endCenter = end->sceneBoundingRect().center();
+        QLineF line(startCenter, endCenter);
+
+        // --- Adjust line to connect to edges of circles instead of centers (optional but nicer) ---
+        // Create temporary lines from center to edge intersection points
+        QLineF startToCenter(startCenter, endCenter);
+        QLineF endToCenter(endCenter, startCenter);
+        // Assuming states are roughly circular/elliptical of known size (e.g., 60x60)
+        qreal stateRadius = 30; // Approximate radius
+        startToCenter.setLength(stateRadius); // Shorten line to edge
+        endToCenter.setLength(stateRadius);   // Shorten line to edge
+        // New line points on the edges
+        QPointF adjustedStartPoint = startToCenter.p2();
+        QPointF adjustedEndPoint = endToCenter.p2();
+        // Update the main line
+        line.setPoints(adjustedStartPoint, adjustedEndPoint);
 
 
-    mainLine->setPen(QPen(Qt::black, 2));
-    mainLine->setData(0, QVariant(objectTransitionId)); // Store transition ID in the line item
+        // Draw the main line
+        QGraphicsLineItem* mainLine = new QGraphicsLineItem(line);
+        mainLine->setPen(arrowPen);
+        arrowGroup->addToGroup(mainLine); // Add line to the group
 
-    scene->addItem(mainLine);
+        // --- Calculate Arrowhead for the line ---
+        double angle = std::atan2(-line.dy(), line.dx()); // Angle of the line
 
-    // Calculate the arrowhead
-    qreal arrowSize = 10;
-    QLineF arrowLine1 = line;
-    QLineF arrowLine2 = line;
+        QPointF arrowP1 = line.p2() - QPointF(sin(angle + M_PI / 3) * arrowSize,
+                                              cos(angle + M_PI / 3) * arrowSize);
+        QPointF arrowP2 = line.p2() - QPointF(sin(angle + M_PI - M_PI / 3) * arrowSize,
+                                              cos(angle + M_PI - M_PI / 3) * arrowSize);
 
-    arrowLine1.setLength(arrowSize);
-    arrowLine2.setLength(arrowSize);
+        QPolygonF arrowHead;
+        arrowHead << line.p2() << arrowP1 << arrowP2; // Points for the triangle
+        QGraphicsPolygonItem *arrowHeadItem = new QGraphicsPolygonItem(arrowHead);
+        arrowHeadItem->setPen(arrowPen);
+        arrowHeadItem->setBrush(Qt::red); // Fill the arrowhead
+        arrowGroup->addToGroup(arrowHeadItem); // Add arrowhead to the group
 
-    arrowLine1.setAngle(line.angle() - 135);
-    arrowLine2.setAngle(line.angle() + 135);
+        // --- Position Label for the line ---
+        QGraphicsTextItem* text = new QGraphicsTextItem(label);
+        QPointF midPoint = line.pointAt(0.5); // Get the midpoint of the line
+        // Offset the label slightly perpendicular to the line
+        qreal offsetX = 10 * sin(angle);
+        qreal offsetY = -10 * cos(angle);
+        text->setPos(midPoint.x() + offsetX, midPoint.y() + offsetY);
+        arrowGroup->addToGroup(text); // Add label to the group
+    }
 
-    QGraphicsLineItem* arrowHead1 = new QGraphicsLineItem(arrowLine1);
-    QGraphicsLineItem* arrowHead2 = new QGraphicsLineItem(arrowLine2);
+    // --- Finalize Group ---
+    arrowGroup->setFlag(QGraphicsItem::ItemIsSelectable); // Make the whole group selectable
+    scene->addItem(arrowGroup); // Add the complete group to the scene
 
-    arrowHead1->setPen(QPen(Qt::black, 2));
-    arrowHead2->setPen(QPen(Qt::black, 2));
-
-    scene->addItem(arrowHead1);
-    scene->addItem(arrowHead2);
-
-    // Add the label next to the arrow
-    QGraphicsTextItem* text = new QGraphicsTextItem(label);
-    QPointF midPoint = line.pointAt(0.5); // Get the midpoint of the line
-    text->setPos(midPoint.x() + 5, midPoint.y() - 15); // Offset the label slightly
-    scene->addItem(text);
-
-    qDebug() << "Arrow drawn from" << start << "to" << end << "with label:" << label;
+    qDebug() << "Arrow/Loop group added to scene for transition ID:" << transitionId;
 }
 
 

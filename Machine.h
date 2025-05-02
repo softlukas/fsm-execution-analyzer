@@ -37,7 +37,7 @@ public:
     // --- Getters for definition ---
     const std::string& getName() const;
     const State* getInitialState() const;
-    State* getState(const std::string& name) const;
+    State* getState(const int stateId) const;
     const Variable* getVariable(const std::string& name) const;
     const Input* getInput(const std::string& name) const;
     const Output* getOutput(const std::string& name) const;

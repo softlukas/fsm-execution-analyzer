@@ -30,6 +30,7 @@ public:
      */
     void setAction(const std::string& action);
 
+    const int getStateId() const;
 
 
     /**

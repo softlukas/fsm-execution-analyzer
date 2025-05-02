@@ -144,13 +144,24 @@ const State* Machine::getInitialState() const {
  * @param name The name of the state to find.
  * @return const State* Pointer to the state, or nullptr if not found.
  */
-State* Machine::getState(const std::string& name) const {
-    auto it = states.find(name);
-    if (it != states.end()) {
-        return it->second.get(); // Return raw pointer from unique_ptr
+State* Machine::getState(const int stateId) const {
+    
+    for (const auto& pair : states) {
+        // pair.first  je std::string (meno stavu)
+        // pair.second je const std::unique_ptr<State>& (ukazovateľ na stav)
+
+        // Získaj ukazovateľ na State objekt a zavolaj jeho metódu getStateId()
+        // Predpokladáme, že trieda State má metódu getStateId()
+        if (pair.second->getStateId() == stateId) {
+            // Našli sme stav so správnym ID
+            return pair.second.get(); // Získaj raw pointer, ak ho potrebuješ
+            
+            // return nalezenyStav; // Alebo urob, čo potrebuješ
+        }
     }
-    return nullptr; // State not found
+    return nullptr;
 }
+
 
 /**
  * @brief Gets a pointer to a variable by its name.
