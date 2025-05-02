@@ -16,7 +16,21 @@ public:
      * @param name The name (identifier) of the state.
      * @param output The output assigned to the state (as a code string).
      */
-    State(const std::string& name, const std::string& output);
+    State(const std::string& name, const std::string& output, int stateId);
+
+    /**
+     * @brief Sets the name of the state.
+     * @param name The new name (identifier) of the state.
+     */
+    void setName(const std::string& name);
+
+    /**
+     * @brief Sets the action associated with the state.
+     * @param action The new action string for the state.
+     */
+    void setAction(const std::string& action);
+
+
 
     /**
      * @brief Gets the name of the state.
@@ -36,6 +50,7 @@ public:
 private:
     std::string stateName;  // State name
     std::string stateOutput; // Action assigned to the state (as a code string)
+    const int stateId;
     // Potentially other member variables...
 };
 

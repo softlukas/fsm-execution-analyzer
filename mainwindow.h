@@ -98,8 +98,12 @@ private:
      * @param start The starting state item.
      * @param end The ending state item.
      */
-    void drawArrow(const QGraphicsItemGroup *start, const QGraphicsItemGroup *end, const QString &label);
+    void drawArrow(const QGraphicsItemGroup *start, const QGraphicsItemGroup *end, const QString &label, int transitionId);
 
+
+    void editTransition();
+
+    void editState(const std::string& stateName);
    
     /**
      * @brief Displays a dialog with the specified text.
@@ -131,6 +135,7 @@ private:
     State *startStateForTransition = nullptr; // Pointer to the start state (if needed)
     State *endStateForTransition = nullptr;   // Pointer to the end state (if needed)
     int objectTransitionId = 0;
+    int objectStateId = 0; // Counter for unique transition IDs
 };
 
 #endif // MAINWINDOW_H

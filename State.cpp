@@ -7,8 +7,8 @@
 
 #include "State.h" // Include the header file
 
-State::State(const std::string& name, const std::string& action)
-    : stateName(name), stateOutput(action) {
+State::State(const std::string& name, const std::string& action, int stateId)
+    : stateName(name), stateOutput(action), stateId(stateId) {
     // Constructor body can be empty for now,
     // initialization happened in the initializer list.
 }
@@ -19,5 +19,13 @@ const std::string& State::getName() const {
 
 const std::string& State::getAction() const {
     return stateOutput;
+}
+
+void State::setName(const std::string& name) {
+    stateName = name;
+}
+
+void State::setAction(const std::string& action) {
+    stateOutput = action;
 }
 
