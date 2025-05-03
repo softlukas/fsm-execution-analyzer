@@ -5,6 +5,7 @@
 #include "State.h"
 #include "Transition.h" // Needed for creating Transition
 #include "JsonCreator.h" // Needed for saving to JSON
+#include "mainWindowUtils.h" // Needed for utility functions
 #include "GraphicsView.h" // Needed for casting ui->graphicsView
 #include <memory>
 #include <QInputDialog>
@@ -26,6 +27,17 @@
 #include <exception>
 #include <sstream> // Needed for std::istringstream
 #include <QtMath> // Needed for qDegreesToRadians
+#include <QPainterPath>       // Required for paths
+#include <QGraphicsPathItem>  // Required for displaying paths
+#include <cmath>              // For std::atan2, std::sin, std::cos, std::sqrt
+#include <QtMath>             // For qDegreesToRadians, qRadiansToDegrees (optional, can use M_PI)
+#include <string>       // Pre std::string
+#include <memory>       // Pre std::unique_ptr, std::make_unique, std::move
+#include <QDebug>       // Pre qDebug()
+#include <QString>      // Pre QString
+#include <QLabel>       // << Potrebný pre zobrazenie textu
+#include <QVBoxLayout>  // << Potrebný pre usporiadanie pod seba
+#include <QGroupBox>    // << Potrebný pre prístup ku groupboxu (ak pristupuješ z kódu)
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -50,6 +62,12 @@ MainWindow::MainWindow(QWidget *parent)
     // Create a Machine object using the Machine constructor
     machine = new Machine("machine1");
     qDebug() << "Machine object created successfully.";
+    // Set trackingOutputsGroupBox as invisible
+    
+    ui->editVarGroupBox->setVisible(false);  
+   
+    ui->editInGroupBox->setVisible(false);
+    
 }
 
 MainWindow::~MainWindow() {
@@ -57,41 +75,37 @@ MainWindow::~MainWindow() {
 }
 
 
+void MainWindow::on_mainMenuButton_clicked() {
+    ui->menuGroupBox->setVisible(true);
+    ui->editVarGroupBox->setVisible(false);  
+    ui->editInGroupBox->setVisible(false);
+   
+    
+}
+
+void MainWindow::on_editFieldsButton_clicked() {
+    ui->menuGroupBox->setVisible(false);
+    ui->editVarGroupBox->setVisible(true);
+    ui->editInGroupBox->setVisible(true);
+}
+
+
+
 void MainWindow::on_saveJsonButton_clicked() {
     qDebug() << "Save JSON button clicked.";
 
-    //JsonCreator::saveToFile(*machine, "automaton.json");
-
-    // Save JSON file logic here
-    // Use JsonCreator::saveToFile(machine, filename) to save the machine to a file
-    // Example: JsonCreator::saveToFile(*machine, "machine.json");
-    // Handle errors and display messages as needed
+   
 }
 
 
 void MainWindow::on_loadJsonButton_clicked() {
     qDebug() << "Load JSON button clicked.";
 
-    // Load JSON file logic here
-    // Use JsonCreator::saveToFile(machine, filename) to save the machine to a file
-    // Example: JsonCreator::saveToFile(*machine, "machine.json");
-    // Handle errors and display messages as needed
-}
-
-void MainWindow::on_addVariableButton_clicked() {
-    qDebug() << "Add variable button clicked.";
-
-    std::string input = displayDialog("Enter variable name:");
-    if (input.empty()) {
-        qDebug() << "Dialog cancelled or empty input.";
-        return;
-    }
-    qDebug() << "Variable name:" << QString::fromStdString(input);
     
-    ParseVariableArguments(input);
 }
 
-void MainWindow::ParseVariableArguments(const std::string& userInput) {
+
+void MainWindow::CreateVarFromUserInput(const std::string& userInput) {
     // Split the input string by spaces
     std::istringstream iss(userInput);
     std::string type, name, value;
@@ -110,6 +124,9 @@ void MainWindow::ParseVariableArguments(const std::string& userInput) {
     try {
         machine->addVariable(std::move(newVariable));
         qDebug() << "Variable added to Automaton model:" << QString::fromStdString(name);
+
+        addVarRowToGUI(name, type, value);
+
     } catch (const std::exception& e) {
         qCritical() << "Error adding variable to automaton:" << e.what();
         QMessageBox::critical(this, "Model Error", QString("Failed to add variable to model: %1").arg(e.what()));
@@ -117,24 +134,303 @@ void MainWindow::ParseVariableArguments(const std::string& userInput) {
     }
 }
 
+
+
+void MainWindow::on_addVariableButton_clicked() {
+   
+    std::string input = MainWindowUtils::ProccessOneArgumentDialog("Enter variable name:");
+    if (input.empty()) {
+        qDebug() << "Dialog cancelled or empty input.";
+        return;
+    }    
+    CreateVarFromUserInput(input);
+}
+
+
+
+
+
+
+/**
+ * @brief Adds a new row representing a variable to the editVarGroupBox UI.
+ * @param name The name of the variable.
+ * @param type The type hint string of the variable.
+ * @param value The current value string of the variable.
+ */
+void MainWindow::addVarRowToGUI(const std::string& name, const std::string& type, const std::string& value) {
+    // Ensure the target GroupBox exists in the UI
+    if (!ui->editVarGroupBox) {
+        qWarning() << "Cannot add variable row: ui->editVarGroupBox is null. Check objectName in Designer.";
+        return;
+    }
+
+    // Get the layout of the GroupBox, assuming/creating QVBoxLayout
+    QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(ui->editVarGroupBox->layout());
+    if (!mainLayout) {
+        qDebug() << "No existing layout found in editVarGroupBox, creating new QVBoxLayout.";
+        mainLayout = new QVBoxLayout();
+        ui->editVarGroupBox->setLayout(mainLayout);
+        // Optional: Add stretch at the end to push items to the top
+        // mainLayout->addStretch(1);
+    }
+
+    // --- Create Widgets for the new row ---
+    // Create a horizontal layout for the row elements
+    QHBoxLayout* rowLayout = new QHBoxLayout();
+
+    // Create labels for type and name (read-only)
+    QLabel* typeLabel = new QLabel(QString::fromStdString(type));
+    QLabel* nameLabel = new QLabel(QString::fromStdString(name));
+    nameLabel->setToolTip(QString::fromStdString(name)); // Show full name on hover if truncated
+
+    // Create an editable line edit for the value
+    QLineEdit* valueEdit = new QLineEdit(QString::fromStdString(value));
+    connect(valueEdit, &QLineEdit::editingFinished, this, &MainWindow::handleVariableValueEdited);
+    valueEdit->setToolTip("Edit variable value");
+
+    
+    // --- Set Object Names for later identification ---
+    // Use a prefix and the variable name to create unique object names
+    QString baseObjectName = "var_" + QString::fromStdString(name);
+    typeLabel->setObjectName(baseObjectName + "_typeLabel");
+    nameLabel->setObjectName(baseObjectName + "_nameLabel");
+    valueEdit->setObjectName(QString::fromStdString(name));
+
+
+    // Create a delete button for the row
+    QPushButton* deleteButton = new QPushButton("x");
+    deleteButton->setToolTip("Delete this variable");
+    deleteButton->setObjectName(baseObjectName + "_deleteBtn");
+
+    // Connect the delete button's clicked signal to a lambda function
+    connect(deleteButton, &QPushButton::clicked, this, [this, rowLayout, name]() {
+        // Remove the row from the layout
+        QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(ui->editVarGroupBox->layout());
+        if (mainLayout) {
+            QLayoutItem* item = nullptr;
+            for (int i = 0; i < mainLayout->count(); ++i) {
+                item = mainLayout->itemAt(i);
+                if (item && item->layout() == rowLayout) {
+                    // Remove the layout and its widgets
+                    while (QLayoutItem* child = rowLayout->takeAt(0)) {
+                        delete child->widget();
+                        delete child;
+                    }
+                    mainLayout->removeItem(item);
+                    delete rowLayout;
+                    break;
+                }
+            }
+        }
+
+        // Remove the variable from the machine
+        machine->removeVariable(name);
+        qDebug() << "Variable removed from UI and machine:" << QString::fromStdString(name);
+    });
+
+    // Add the delete button to the row layout
+    rowLayout->addWidget(deleteButton);
+
+    //deleteButton->setObjectName(baseObjectName + "_deleteBtn");
+    // Set object name for the layout itself to find the whole row later
+    rowLayout->setObjectName(baseObjectName + "_layout");
+
+
+    // --- Add widgets to the row layout ---
+    rowLayout->addWidget(typeLabel);    // Add type label
+    rowLayout->addWidget(nameLabel);    // Add name label
+    rowLayout->addWidget(valueEdit, 1); // Add value edit, give it stretch factor 1
+    //rowLayout->addWidget(deleteButton); // Add delete button
+
+    // --- Add the row layout to the main vertical layout ---
+    // Insert before the last item if it's a stretch, otherwise at the end
+    int insertPos = mainLayout->count();
+    if (insertPos > 0 && mainLayout->itemAt(insertPos - 1)->spacerItem()) {
+        insertPos--; // Insert before the stretch
+    }
+    mainLayout->insertLayout(insertPos, rowLayout);
+
+    qDebug() << "Added variable row to UI for:" << QString::fromStdString(name);
+
+    // Make the group box visible if it wasn't already
+    if (!ui->editVarGroupBox->isVisible()) {
+        ui->editVarGroupBox->setVisible(true);
+    }
+     // Ensure the group box is enabled
+     if (!ui->editVarGroupBox->isEnabled()) {
+        ui->editVarGroupBox->setEnabled(true);
+    }
+}
+
+void MainWindow::handleVariableValueEdited() {
+    // Get the sender object (the QLineEdit that emitted the signal)
+    QLineEdit* senderEdit = qobject_cast<QLineEdit*>(sender());
+    if (!senderEdit) {
+        qWarning() << "Sender is not a QLineEdit.";
+        return;
+    }
+
+    // Get the object name to identify the variable
+    QString varName = senderEdit->objectName();
+
+    Variable* variable = machine->getVariable(varName.toStdString());
+    if (!variable) {
+        qWarning() << "Variable not found in machine:" << varName;
+        return;
+    }
+    variable->setValue(senderEdit->text().toStdString());
+    qDebug() << "Variable value edited:" << varName << "New value:" << QString::fromStdString(variable->getValueAsString());
+   
+    
+}
+
+
+
+
+void MainWindow::addInputRowToGUI(const std::string& name) {
+    // Ensure the target GroupBox exists in the UI
+    if (!ui->editVarGroupBox) {
+        qWarning() << "Cannot add variable row: ui->editVarGroupBox is null. Check objectName in Designer.";
+        return;
+    }
+
+    // Get the layout of the GroupBox, assuming/creating QVBoxLayout
+    QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(ui->editInGroupBox->layout());
+    if (!mainLayout) {
+        qDebug() << "No existing layout found in editVarGroupBox, creating new QVBoxLayout.";
+        mainLayout = new QVBoxLayout();
+        ui->editInGroupBox->setLayout(mainLayout);
+        // Optional: Add stretch at the end to push items to the top
+        // mainLayout->addStretch(1);
+    }
+
+    // --- Create Widgets for the new row ---
+    // Create a horizontal layout for the row elements
+    QHBoxLayout* rowLayout = new QHBoxLayout();
+
+    // Create labels for type and name (read-only)
+   
+    QLabel* nameLabel = new QLabel(QString::fromStdString(name));
+    nameLabel->setToolTip(QString::fromStdString(name)); // Show full name on hover if truncated
+
+    // Create an editable line edit for the value
+    QLineEdit* valueEdit = new QLineEdit(QString::fromStdString(""));
+    connect(valueEdit, &QLineEdit::editingFinished, this, &MainWindow::handleInputValueEdited);
+    
+    valueEdit->setToolTip("Edit variable value");
+
+    
+
+    // --- Set Object Names for later identification ---
+    // Use a prefix and the variable name to create unique object names
+    QString baseObjectName = "var_" + QString::fromStdString(name);
+    
+    nameLabel->setObjectName(baseObjectName + "_nameLabel");
+    valueEdit->setObjectName(QString::fromStdString(name));
+
+    // Create a delete button for the row
+    QPushButton* deleteButton = new QPushButton("x");
+    deleteButton->setToolTip("Delete this input");
+    deleteButton->setObjectName(baseObjectName + "_deleteBtn");
+
+    // Connect the delete button's clicked signal to a lambda function
+    connect(deleteButton, &QPushButton::clicked, this, [this, rowLayout, name]() {
+        // Remove the row from the layout
+        QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(ui->editInGroupBox->layout());
+        if (mainLayout) {
+            QLayoutItem* item = nullptr;
+            for (int i = 0; i < mainLayout->count(); ++i) {
+                item = mainLayout->itemAt(i);
+                if (item && item->layout() == rowLayout) {
+                    // Remove the layout and its widgets
+                    while (QLayoutItem* child = rowLayout->takeAt(0)) {
+                        delete child->widget();
+                        delete child;
+                    }
+                    mainLayout->removeItem(item);
+                    delete rowLayout;
+                    break;
+                }
+            }
+        }
+
+        // Remove the input from the machine
+        machine->removeInput(name);
+        qDebug() << "Input removed from UI and machine:" << QString::fromStdString(name);
+    });
+
+    // Add the delete button to the row layout
+    rowLayout->addWidget(deleteButton);
+    //deleteButton->setObjectName(baseObjectName + "_deleteBtn");
+    // Set object name for the layout itself to find the whole row later
+    rowLayout->setObjectName(baseObjectName + "_layout");
+
+
+    // --- Add widgets to the row layout ---
+    // Add type label
+    rowLayout->addWidget(nameLabel);    // Add name label
+    rowLayout->addWidget(valueEdit, 1); // Add value edit, give it stretch factor 1
+    //rowLayout->addWidget(deleteButton); // Add delete button
+
+    // --- Add the row layout to the main vertical layout ---
+    // Insert before the last item if it's a stretch, otherwise at the end
+    int insertPos = mainLayout->count();
+    if (insertPos > 0 && mainLayout->itemAt(insertPos - 1)->spacerItem()) {
+        insertPos--; // Insert before the stretch
+    }
+    mainLayout->insertLayout(insertPos, rowLayout);
+
+    
+
+    qDebug() << "Added variable row to UI for:" << QString::fromStdString(name);
+
+    
+}
+
+void MainWindow::handleInputValueEdited() {
+    // Get the sender object (the QLineEdit that emitted the signal)
+    QLineEdit* senderEdit = qobject_cast<QLineEdit*>(sender());
+    if (!senderEdit) {
+        qWarning() << "Sender is not a QLineEdit.";
+        return;
+    }
+
+    // Get the object name to identify the variable
+    QString varName = senderEdit->objectName();
+
+    Input* input = machine->getInput(varName.toStdString());
+    if (!input) {
+        qWarning() << "Input not found in machine:" << varName;
+        return;
+    }
+    input->updateValue(senderEdit->text().toStdString());
+    qDebug() << "Input value edited:" << varName << "New value:" << QString::fromStdString(input->getLastValue().value_or("No value"));
+   
+}
+
 void MainWindow::on_addInputButton_clicked() {
     qDebug() << "Input button clicked.";
 
-    std::string inputName = displayDialog("Enter variable name:");
+    std::string inputName = MainWindowUtils::ProccessOneArgumentDialog("Enter variable name:");
     if (inputName.empty()) {
         qDebug() << "Dialog cancelled or empty input.";
         return;
     }
     std::unique_ptr<Input> newInput = std::make_unique<Input>(inputName);
     machine->addInput(std::move(newInput));
-    qDebug() << "Input name:" << QString::fromStdString(inputName);
+
+    addInputRowToGUI(inputName);
+
+    
+
+
 }
 
 void MainWindow::on_addOutputButton_clicked() {
     
     qDebug() << "Input button clicked.";
 
-    std::string outputName = displayDialog("Enter variable name:");
+    std::string outputName = MainWindowUtils::ProccessOneArgumentDialog("Enter variable name:");
     if (outputName.empty()) {
         qDebug() << "Dialog cancelled or empty input.";
         return;
@@ -143,13 +439,78 @@ void MainWindow::on_addOutputButton_clicked() {
     std::unique_ptr<Output> newOutput = std::make_unique<Output>(outputName);
     machine->addOutput(std::move(newOutput));
     qDebug() << "Input name:" << QString::fromStdString(outputName);
+
+
+
+    // 1. Získaj ukazateľ na QGroupBox (nahraď 'trackingOutputsGroupBox' skutočným menom!)
+    QGroupBox *groupBox = ui->trackingOutputsGroupBox;
+    if (!groupBox) {
+        qWarning() << "ERROR: Could not find the QGroupBox named 'trackingOutputsGroupBox' in the UI.";
+        return;
+    }
+
+    // 2. Získaj layout z groupboxu. Ak tam ešte nie je, vytvor ho a nastav parametre.
+    QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(groupBox->layout());
+    if (!layout) {
+        qDebug() << "GroupBox has no layout, creating and configuring a new QVBoxLayout.";
+        layout = new QVBoxLayout();
+
+        // --- NASTAVENIE MENŠÍCH MEDZIER A OKRAJOV ---
+        layout->setSpacing(2); // Zmenší vertikálnu medzeru MEDZI widgetmi (napr. na 2 pixely)
+        layout->setContentsMargins(4, 4, 4, 4); // Zmenší okraje OKOLO layoutu v groupboxe (L,T,R,B)
+
+        groupBox->setLayout(layout);
+
+        // --- PRIDANIE "PRUŽINY" PRE ZAROVNANIE HORE ---
+        // Pridaj addStretch iba raz, na koniec layoutu. Toto zabezpečí,
+        // že všetky widgety pridané PRED túto pružinu budú tlačené nahor.
+        layout->addStretch();
+    }
+    outputName = outputName + " = value";
+    // 3. Vytvor nový QLabel pre zobrazenie mena vstupu
+    QLabel *newLabel = new QLabel(QString::fromStdString(outputName), groupBox); // Použi qInputName
+
+    // Create a horizontal layout for the label and delete button
+    QHBoxLayout *rowLayout = new QHBoxLayout();
+
+    // Add the label to the row layout
+    rowLayout->addWidget(newLabel);
+
+    // Create a delete button for the label
+    QPushButton *deleteButton = new QPushButton("x", groupBox);
+    deleteButton->setToolTip("Delete this output");
+
+    // Add the delete button to the row layout
+    rowLayout->addWidget(deleteButton);
+
+    // Connect the delete button's clicked signal to a lambda function
+    connect(deleteButton, &QPushButton::clicked, this, [this, layout, rowLayout, newLabel, deleteButton, outputName]() {
+        // Remove the row layout and its widgets
+        layout->removeItem(rowLayout);
+        delete newLabel;
+        delete deleteButton;
+        delete rowLayout;
+
+        // Remove the output from the machine
+        machine->removeOutput(outputName);
+        qDebug() << "Output removed from UI and machine:" << QString::fromStdString(outputName);
+    });
+
+    // Add the row layout to the main layout
+    layout->insertLayout(0, rowLayout);
+
+
+    // --- PRIDANIE NOVÉHO LABELU NA ZAČIATOK (HORE) ---
+    // Použi insertWidget s indexom 0. Tým sa nový label vloží ako prvý prvok,
+    // PRED všetky ostatné widgety (a pred addStretch, ak tam je).
+    layout->insertWidget(0, newLabel);
+
+    // /qDebug() << "Inserted QLabel for" << qInputName << "at the top of the layout.";
+
+    // groupBox->update(); // Zvyčajne nie je potrebné volať explicitne, layout sa aktualizuje sám
+
+    // ... (voliteľné scrollovanie) ...
 }
-
-
-
-
-
-
 
 
 // ... on_addStateButton_clicked() should be the version that prompts for name/action ...
@@ -245,9 +606,6 @@ void MainWindow::on_addStateButton_clicked() {
     qDebug() << "Group (Ellipse + Name) added to scene for state:" << stateName;
 }
 
-void MainWindow::on_actionSave_triggered() {
-    qDebug() << "Save action triggered.";
-}
 
 
 /**
@@ -275,6 +633,11 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
         //return;
     //}
 
+
+    if(!addingTransitionMode) {
+        qDebug() << "handleStateClick called. Not in adding transition mode.";
+        return;
+    }
     
 
     qDebug() << "handleStateClick called. Adding transition mode:";
@@ -501,7 +864,7 @@ void MainWindow::editState(QGraphicsItemGroup *item) {
     std::string currentAction = state->getAction();
     
 
-    ProccessInputEditDialog("Edit State", "Enter new state name:", "Enter new action:",
+    ProccessMultipleArgsInputEditDialog("Edit State", "Enter new state name:", "Enter new action:",
         currentName, currentAction, &newName, &newAction);
 
     qDebug () << "New name:" << QString::fromStdString(newName);
@@ -556,24 +919,7 @@ void MainWindow::editState(QGraphicsItemGroup *item) {
     } else {
         qWarning() << "Could not find text item within the group to update.";
     }
-
-    
-    
-
-    
-    //newName = QString::fromStdString(updatedName);
-    //newAction = QString::fromStdString(updatedAction);
-            /*
-            
-            qDebug() << "State updated: Name =" << newName << ", Action =" << newAction;
-        } else {
-            qDebug() << "Dialog cancelled.";
-        }
-    } else {
-        //qDebug() << "State not found with name:" << QString::fromStdString(stateId);
-    }
-        */
-        
+   
 }
 
 void MainWindow::setElipseText(QGraphicsEllipseItem* ellipseItem, const std::string& text) {
@@ -589,8 +935,7 @@ void MainWindow::setElipseText(QGraphicsEllipseItem* ellipseItem, const std::str
     textItem->setPos(textX, textY);
 }
 
-
-void MainWindow::ProccessInputEditDialog(const std::string& title, const std::string& label1Text, const std::string& label2Text, 
+void MainWindow::ProccessMultipleArgsInputEditDialog(const std::string& title, const std::string& label1Text, const std::string& label2Text, 
     std::string& predefinedInput1, std::string& predefinedInput2, 
     std::string* newInput1, std::string* newInput2) {
 
@@ -630,25 +975,6 @@ void MainWindow::ProccessInputEditDialog(const std::string& title, const std::st
 
 }
 
-
-
-
-
-
-
-std::string MainWindow::displayDialog(const std::string& textToDisplay) {
-
-    
-    bool okClicked;
-    QString input = QInputDialog::getText(this, "Enter " + QString::fromStdString(textToDisplay),
-                                          QString::fromStdString(textToDisplay), QLineEdit::Normal,
-                                          "", &okClicked);
-    if (!okClicked || input.trimmed().isEmpty()) {
-        qDebug() << "Dialog cancelled or empty input.";
-        return nullptr; // Return an empty string if cancelled or no input
-    }
-    return input.trimmed().toStdString();
-}
 
 
 //void MainWindow::createTransition(const std::string& startStateName, const std::string& endStateName) {

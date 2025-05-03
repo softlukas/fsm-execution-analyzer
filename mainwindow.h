@@ -43,12 +43,10 @@ private slots:
      */
     void on_addStateButton_clicked();
 
-    /**
-     * @brief Slot executed when the 'File -> Save' menu action (actionSave) is triggered.
-     * Saves the current automaton definition to a file.
-     */
-    void on_actionSave_triggered(); // Keep this slot declaration
+    void handleVariableValueEdited(); // Spoločný slot pre všetky QLineEdits
 
+    void handleInputValueEdited(); // Spoločný slot pre všetky QLineEdits
+   
     /**
      * @brief Slot executed when the 'Add Transition' button (addTransitionButton) is clicked.
      * Initiates the process of adding a transition by waiting for state clicks.
@@ -69,6 +67,9 @@ private slots:
     void on_addOutputButton_clicked();
     void on_saveJsonButton_clicked();
     void on_loadJsonButton_clicked();
+
+    void on_mainMenuButton_clicked();
+    void on_editFieldsButton_clicked();
 
     
 
@@ -104,6 +105,11 @@ private:
     void editTransition();
 
     void editState(QGraphicsItemGroup *item);
+
+
+    void addVarRowToGUI(const std::string& name, const std::string& type, const std::string& value);
+
+    void addInputRowToGUI(const std::string& name);
    
     /**
      * @brief Displays a dialog with the specified text.
@@ -116,10 +122,10 @@ private:
      */
     std::string displayDialog(const std::string& textToDisplay);
 
-    void ParseVariableArguments(const std::string& userInput);
+    void CreateVarFromUserInput(const std::string& userInput);
 
-    void ProccessInputEditDialog(const std::string& title, const std::string& label1Text, const std::string& label2Text, 
-        std::string& predefinedInput1, std::string& predifinedInput, 
+    void ProccessMultipleArgsInputEditDialog(const std::string& title, const std::string& label1Text, const std::string& label2Text, 
+        std::string& predefinedInput1, std::string& predefinedInput2, 
         std::string* newInput1, std::string* newInput2);
 
     void setElipseText(QGraphicsEllipseItem* ellipseItem, const std::string& text);

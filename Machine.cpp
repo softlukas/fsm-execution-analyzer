@@ -168,7 +168,7 @@ State* Machine::getState(const int stateId) const {
  * @param name The name of the variable to find.
  * @return const Variable* Pointer to the variable, or nullptr if not found.
  */
-const Variable* Machine::getVariable(const std::string& name) const {
+Variable* Machine::getVariable(const std::string& name) const {
     auto it = variables.find(name);
     if (it != variables.end()) {
         return it->second.get();
@@ -181,12 +181,32 @@ const Variable* Machine::getVariable(const std::string& name) const {
  * @param name The name of the input to find.
  * @return const Input* Pointer to the input, or nullptr if not found.
  */
-const Input* Machine::getInput(const std::string& name) const {
+Input* Machine::getInput(const std::string& name) const {
     auto it = inputs.find(name);
     if (it != inputs.end()) {
         return it->second.get();
     }
     return nullptr;
+}
+
+
+void Machine::removeInput(const std::string& name) {
+    auto it = inputs.find(name);
+    if (it != inputs.end()) {
+        inputs.erase(it);
+    }
+}
+void Machine::removeOutput(const std::string& name) {
+    auto it = outputs.find(name);
+    if (it != outputs.end()) {
+        outputs.erase(it);
+    }
+}
+void Machine::removeVariable(const std::string& name) {
+    auto it = variables.find(name);
+    if (it != variables.end()) {
+        variables.erase(it);
+    }
 }
 
 /**

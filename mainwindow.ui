@@ -14,19 +14,6 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QPushButton" name="addStateButton">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>20</y>
-      <width>241</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Add State</string>
-    </property>
-   </widget>
    <widget class="GraphicsView" name="graphicsView">
     <property name="geometry">
      <rect>
@@ -37,106 +24,175 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="addTransitionButton">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>80</y>
-      <width>241</width>
-      <height>51</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Add Transition</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="addVariableButton">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>150</y>
-      <width>241</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Add variable</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="addInputButton">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>210</y>
-      <width>241</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Add input</string>
-    </property>
-   </widget>
    <widget class="QPushButton" name="addOutputButton">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>270</y>
-      <width>241</width>
+      <x>720</x>
+      <y>350</y>
+      <width>41</width>
       <height>41</height>
      </rect>
     </property>
     <property name="text">
-     <string>Add output</string>
+     <string>+</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="saveJsonButton">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>330</y>
-      <width>241</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Save json</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="loadJsonButton">
+   <widget class="QGroupBox" name="trackingOutputsGroupBox">
     <property name="geometry">
      <rect>
       <x>290</x>
-      <y>350</y>
-      <width>241</width>
+      <y>390</y>
+      <width>471</width>
+      <height>161</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Tracking outputs</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="mainMenuButton">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>20</y>
+      <width>111</width>
       <height>41</height>
      </rect>
     </property>
     <property name="text">
-     <string>Load json</string>
+     <string>Main menu</string>
     </property>
    </widget>
-  </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>800</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menu_File">
+   <widget class="QPushButton" name="editFieldsButton">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>20</y>
+      <width>101</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Edit Fields</string>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="editInGroupBox">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>70</y>
+      <width>261</width>
+      <height>241</height>
+     </rect>
+    </property>
     <property name="title">
-     <string>&amp;File</string>
+     <string>Edit Inputs</string>
     </property>
+    <widget class="QPushButton" name="addInputButton">
+     <property name="geometry">
+      <rect>
+       <x>210</x>
+       <y>20</y>
+       <width>41</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>+</string>
+     </property>
+    </widget>
    </widget>
-   <widget class="QMenu" name="actionSave">
+   <widget class="QGroupBox" name="editVarGroupBox">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>340</y>
+      <width>261</width>
+      <height>191</height>
+     </rect>
+    </property>
     <property name="title">
-     <string>&amp;Save</string>
+     <string>Edit variables</string>
     </property>
+    <widget class="QPushButton" name="addVariableButton">
+     <property name="geometry">
+      <rect>
+       <x>210</x>
+       <y>20</y>
+       <width>41</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>+</string>
+     </property>
+    </widget>
    </widget>
-   <addaction name="menu_File"/>
-   <addaction name="actionSave"/>
+   <widget class="QGroupBox" name="menuGroupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>80</y>
+      <width>261</width>
+      <height>1091</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Menu</string>
+    </property>
+    <widget class="QPushButton" name="addStateButton">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>241</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Add State</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="addTransitionButton">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>130</y>
+       <width>241</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Add Transition</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="saveJsonButton">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>250</y>
+       <width>241</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Save json</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="loadJsonButton">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>310</y>
+       <width>241</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Load json</string>
+     </property>
+    </widget>
+   </widget>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>

@@ -38,8 +38,8 @@ public:
     const std::string& getName() const;
     const State* getInitialState() const;
     State* getState(const int stateId) const;
-    const Variable* getVariable(const std::string& name) const;
-    const Input* getInput(const std::string& name) const;
+    Variable* getVariable(const std::string& name) const;
+    Input* getInput(const std::string& name) const;
     const Output* getOutput(const std::string& name) const;
     const std::map<std::string, std::unique_ptr<State>>& getStates() const;
     const std::map<std::string, std::unique_ptr<Variable>>& getVariables() const;
@@ -47,6 +47,10 @@ public:
     const std::map<std::string, std::unique_ptr<Output>>& getOutputs() const;
     const std::vector<std::unique_ptr<Transition>>& getTransitions() const;
     Transition* getTransition(const int transitionId) const;
+
+    void removeInput(const std::string& name);
+    void removeOutput(const std::string& name);
+    void removeVariable(const std::string& name);
 
     // --- Methods for interacting during runtime (to be used by interpreter/monitor) ---
     bool setVariableValue(const std::string& name, const std::string& value);

@@ -25,6 +25,9 @@ public:
           typeHint(typeHint)
     {}
 
+
+    
+
     // Note: getName() is inherited from MachineElement and doesn't need to be redefined.
     // Note: The virtual destructor ~MachineElement() is also inherited.
 
@@ -66,6 +69,8 @@ private:
      * @brief A hint about the intended C++ data type of the variable.
      */
     std::string typeHint;
+
+
 
     // std::any typedValue; // Optional: Alternative storage for typed values
 };

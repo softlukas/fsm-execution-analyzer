@@ -21,6 +21,7 @@ SOURCES += \
     MachineElement.cpp \# As seen in the image, maybe rename/replace later?
     json_conversions.cpp \
     CodeGenerator.cpp \
+    mainwindowUtils.cpp \
     # Add any other .cpp files here
 
 # List all header files explicitly
@@ -38,6 +39,7 @@ HEADERS += \
     MachineElement.h \
     json_conversions.h \
     CodeGenerator.h \
+    mainWindowUtils.h \
     # As seen in the image, maybe rename/replace later?
     # Add any other .h files here
 
