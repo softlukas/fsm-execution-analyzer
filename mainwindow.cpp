@@ -61,7 +61,13 @@ MainWindow::MainWindow(QWidget *parent)
         qWarning() << "WARNING: QGraphicsView named 'graphicsView' not found or not promoted to GraphicsView in UI file.";
     }
     // Create a Machine object using the Machine constructor
-    machine = new Machine("machine1");
+
+    std::string machineName = MainWindowUtils::ProccessOneArgumentDialog("Set automat name");
+
+
+    machine = new Machine(machineName);
+
+    
     qDebug() << "Machine object created successfully.";
     // Set trackingOutputsGroupBox as invisible
     
