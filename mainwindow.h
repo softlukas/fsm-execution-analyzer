@@ -68,10 +68,13 @@ private slots:
     void on_saveJsonButton_clicked();
     void on_loadJsonButton_clicked();
 
+    void on_runAutomatButton_clicked();
+
     void on_mainMenuButton_clicked();
     void on_editFieldsButton_clicked();
-
     
+
+    QGraphicsItemGroup* drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene);
 
 
     // If NOT using custom GraphicsView with stateItemClicked signal,
@@ -99,7 +102,7 @@ private:
      * @param start The starting state item.
      * @param end The ending state item.
      */
-    void drawArrow(const QGraphicsItemGroup *start, const QGraphicsItemGroup *end, const QString &label, int transitionId);
+    
 
 
     void editTransition();

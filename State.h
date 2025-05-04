@@ -3,6 +3,7 @@
 
 #include <string> // We'll need this for state name and action
 #include <vector> // Maybe later for a list of transitions originating from this state? (TBD based on design)
+#include <QGraphicsItemGroup> // Required for QGraphicsItemGroup
 
 /**
  * @brief Represents a single state of the interpreted finite automaton.
@@ -52,6 +53,8 @@ private:
     std::string stateName;  // State name
     std::string stateOutput; // Action assigned to the state (as a code string)
     const int stateId;
+    bool isActive = false;
+    //QGraphicsItemGroup * stateGroup = nullptr; // Pointer to the QGraphicsItemGroup representing the state in the scene
     // Potentially other member variables...
 };
 

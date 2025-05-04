@@ -222,6 +222,11 @@ const Output* Machine::getOutput(const std::string& name) const {
     return nullptr;
 }
 
+void Machine::addStateGraphicItem(std::unique_ptr<StateGraphicItem> stateGraphicItem) {
+    stateGrapicItems[stateGraphicItemId] = std::move(stateGraphicItem);
+    stateGraphicItemId++;
+}
+
 /**
  * @brief Gets a constant reference to the map of all states.
  */
@@ -272,6 +277,14 @@ bool Machine::setVariableValue(const std::string& name, const std::string& value
         return true;
     }
     return false; // Variable not found
+}
+
+StateGraphicItem* Machine::getStateGraphicItem(const int stateGraphicItemId) const {
+    auto it = stateGrapicItems.find(stateGraphicItemId);
+    if (it != stateGrapicItems.end()) {
+        return it->second.get();
+    }
+    return nullptr; // State graphic item not found
 }
 
 /**

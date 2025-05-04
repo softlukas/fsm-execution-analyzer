@@ -38,6 +38,7 @@
 #include <QLabel>       // << Potrebný pre zobrazenie textu
 #include <QVBoxLayout>  // << Potrebný pre usporiadanie pod seba
 #include <QGroupBox>    // << Potrebný pre prístup ku groupboxu (ak pristupuješ z kódu)
+#include "StateGraphicItem.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -67,12 +68,34 @@ MainWindow::MainWindow(QWidget *parent)
     ui->editVarGroupBox->setVisible(false);  
    
     ui->editInGroupBox->setVisible(false);
+
+    std::string initialStateName;
+    std::string initialStateAction;;
+
+    std::string portGUI;
+    std::string portAutomat;
+
+    ProccessMultipleArgsInputEditDialog("ADD PORTS", "Add port GUI", "Add port AUTOMAT",
+        initialStateName, initialStateAction, &portGUI, &portAutomat);
+
     
 }
 
 MainWindow::~MainWindow() {
     delete ui;
 }
+
+
+
+void MainWindow::on_runAutomatButton_clicked() {
+
+    qDebug() << "Run Automaton button clicked.";
+    
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////////
 
 
 void MainWindow::on_mainMenuButton_clicked() {
@@ -588,6 +611,36 @@ void MainWindow::on_addStateButton_clicked() {
     group->setData(0, QVariant(objectStateId)); // Store the state ID in the group
     group->setData(1, "state"); // Store the state name in the group
 
+    StateGraphicItem* stateGraphicItem = new StateGraphicItem(objectStateId, group->sceneBoundingRect().center());
+
+    
+
+
+    machine->addStateGraphicItem(std::make_unique<StateGraphicItem>(*stateGraphicItem));
+
+
+
+
+    // Create a custom event filter and install it on the group
+    //QObject* eventFilter = new QObject(this);
+    //group->installSceneEventFilter();
+
+    // Connect the position change signal to a custom slot
+    connect(scene, &QGraphicsScene::changed, this, [this, group]() {
+        if (group->isSelected()) {
+            qDebug() << "Group moved. New position:" << group->pos();
+            qDebug() << "Moved state ID:" << group->data(0).toInt();
+            
+            StateGraphicItem* stateGraphicItem = machine->getStateGraphicItem(group->data(0).toInt());
+            //stateGraphicItem->updateTransitions(scene);
+        }
+    });
+   
+    //connect(group, &QGraphicsItemGroup::yChanged, this, [this, group]() {
+        //qDebug() << "Group moved. New position:" << group->pos();
+        // Handle the movement event here
+    //});
+
     scene->addItem(group);
 
     std::unique_ptr<State> newState = std::make_unique<State>(stateName.toStdString(), stateAction.toStdString(), objectStateId);
@@ -730,8 +783,17 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
                 return;
             }
            
-            drawArrow(startItemForTransition, endItemForTransition, QString::fromStdString(condition.toStdString()), objectTransitionId);
+            QGraphicsItemGroup *transitionGroup = MainWindowUtils::drawArrow(startItemForTransition->sceneBoundingRect().center(), endItemForTransition->sceneBoundingRect().center(), QString::fromStdString(condition.toStdString()), objectTransitionId, scene);
+            //scene->addItem(transitionGroup);
             
+            StateGraphicItem *startStateGraphicItem = machine->getStateGraphicItem(item->data(0).toInt());
+
+            if (startStateGraphicItem) {
+                startStateGraphicItem->addTransitionGroup(transitionGroup);
+            } else {
+                qDebug() << "Start state graphic item not found.";
+            }
+
             try {
                 if(this->startStateForTransition && this->endStateForTransition) {
                     std::unique_ptr<Transition> newTransition = std::make_unique<Transition>(
@@ -988,137 +1050,7 @@ void MainWindow::ProccessMultipleArgsInputEditDialog(const std::string& title, c
  * @param start The starting point of the arrow.
  * @param end The ending point of the arrow.
  */
-void MainWindow::drawArrow(const QGraphicsItemGroup *start, const QGraphicsItemGroup *end, const QString &label, int transitionId) {
-    if (!scene || !start || !end) {
-        qWarning() << "Cannot draw arrow: Invalid scene or start/end item.";
-        return;
-    }
 
-    // --- Common Arrow Properties ---
-    QPen arrowPen(Qt::red, 2); // Pen for the arrow line and head
-    qreal arrowSize = 10;      // Size of the arrowhead
-
-    // --- Create a group for the entire transition representation ---
-    // This group will contain the line/curve, arrowhead(s), and label.
-    QGraphicsItemGroup *arrowGroup = new QGraphicsItemGroup();
-
-    // --- Store Transition ID in the group ---
-     // Item type identifier
-    arrowGroup->setData(0, QVariant(transitionId)); // Store the actual transition ID
-    arrowGroup->setData(1, "Transition");
-
-    if (start == end) {
-        // --- Draw Self-Loop (Arc) ---
-        qDebug() << "Drawing self-loop for state:" << start->data(0).toString() << "ID:" << transitionId;
-
-        QRectF bounds = start->sceneBoundingRect(); // Get bounds of the state group
-        qreal radiusX = bounds.width() / 1.5; // Horizontal radius of the loop
-        qreal radiusY = bounds.height() / 1.5; // Vertical radius of the loop
-        QPointF center = bounds.center();
-        // Position the loop slightly above the state
-        QPointF loopTopCenter(center.x(), bounds.top() - radiusY * 0.8);
-
-        // Create the path for the arc (ellipse segment)
-        QPainterPath loopPath;
-        // Start angle and span angle for QPainterPath::arcTo
-        // Angles are in degrees, 0 is at 3 o'clock, positive is counter-clockwise
-        // We want an arc mostly above the state
-        qreal startAngle = 210; // Start slightly left of bottom
-        qreal spanAngle = -240; // Go counter-clockwise almost full circle
-        QRectF arcRect(loopTopCenter.x() - radiusX, loopTopCenter.y() - radiusY, 2 * radiusX, 2 * radiusY);
-        loopPath.arcMoveTo(arcRect, startAngle);
-        loopPath.arcTo(arcRect, startAngle, spanAngle);
-
-        // Create a QGraphicsPathItem for the loop
-        QGraphicsPathItem* loopItem = new QGraphicsPathItem(loopPath);
-        loopItem->setPen(arrowPen);
-        arrowGroup->addToGroup(loopItem); // Add arc to the group
-
-        // --- Calculate Arrowhead for the loop ---
-        // Get the end point and angle of the arc path
-        QPointF loopEnd = loopPath.currentPosition();
-        qreal angle = loopPath.angleAtPercent(1.0); // Angle at the end of the path
-
-        
-
-        QPointF arrowP1 = loopEnd + QPointF(qSin(qDegreesToRadians(-angle) + M_PI / 3) * arrowSize,
-                            qCos(qDegreesToRadians(-angle) + M_PI / 3) * arrowSize);
-        QPointF arrowP2 = loopEnd + QPointF(qSin(qDegreesToRadians(-angle) + M_PI - M_PI / 3) * arrowSize,
-                            qCos(qDegreesToRadians(-angle) + M_PI - M_PI / 3) * arrowSize);
-
-        QPolygonF arrowHead;
-        arrowHead << loopEnd << arrowP1 << arrowP2;
-        QGraphicsPolygonItem *arrowHeadItem = new QGraphicsPolygonItem(arrowHead);
-        arrowHeadItem->setPen(arrowPen);
-        arrowHeadItem->setBrush(Qt::red); // Fill the arrowhead
-        arrowGroup->addToGroup(arrowHeadItem); // Add arrowhead to the group
-
-        // --- Position Label for the loop ---
-        // Place the label above the loop's highest point
-        QGraphicsTextItem* text = new QGraphicsTextItem(label);
-        QRectF textRect = text->boundingRect();
-        text->setPos(loopTopCenter.x() - textRect.width() / 2, loopTopCenter.y() - radiusY - textRect.height() - 2);
-        arrowGroup->addToGroup(text); // Add label to the group
-
-    } else {
-        // --- Draw Straight Arrow ---
-        qDebug() << "Drawing straight arrow from" << start->data(0).toString() << "to" << end->data(0).toString() << "ID:" << transitionId;
-
-        QPointF startCenter = start->sceneBoundingRect().center();
-        QPointF endCenter = end->sceneBoundingRect().center();
-        QLineF line(startCenter, endCenter);
-
-        // --- Adjust line to connect to edges of circles instead of centers (optional but nicer) ---
-        // Create temporary lines from center to edge intersection points
-        QLineF startToCenter(startCenter, endCenter);
-        QLineF endToCenter(endCenter, startCenter);
-        // Assuming states are roughly circular/elliptical of known size (e.g., 60x60)
-        qreal stateRadius = 30; // Approximate radius
-        startToCenter.setLength(stateRadius); // Shorten line to edge
-        endToCenter.setLength(stateRadius);   // Shorten line to edge
-        // New line points on the edges
-        QPointF adjustedStartPoint = startToCenter.p2();
-        QPointF adjustedEndPoint = endToCenter.p2();
-        // Update the main line
-        line.setPoints(adjustedStartPoint, adjustedEndPoint);
-
-
-        // Draw the main line
-        QGraphicsLineItem* mainLine = new QGraphicsLineItem(line);
-        mainLine->setPen(arrowPen);
-        arrowGroup->addToGroup(mainLine); // Add line to the group
-
-        // --- Calculate Arrowhead for the line ---
-        double angle = std::atan2(-line.dy(), line.dx()); // Angle of the line
-
-        QPointF arrowP1 = line.p2() - QPointF(sin(angle + M_PI / 3) * arrowSize,
-                                              cos(angle + M_PI / 3) * arrowSize);
-        QPointF arrowP2 = line.p2() - QPointF(sin(angle + M_PI - M_PI / 3) * arrowSize,
-                                              cos(angle + M_PI - M_PI / 3) * arrowSize);
-
-        QPolygonF arrowHead;
-        arrowHead << line.p2() << arrowP1 << arrowP2; // Points for the triangle
-        QGraphicsPolygonItem *arrowHeadItem = new QGraphicsPolygonItem(arrowHead);
-        arrowHeadItem->setPen(arrowPen);
-        arrowHeadItem->setBrush(Qt::red); // Fill the arrowhead
-        arrowGroup->addToGroup(arrowHeadItem); // Add arrowhead to the group
-
-        // --- Position Label for the line ---
-        QGraphicsTextItem* text = new QGraphicsTextItem(label);
-        QPointF midPoint = line.pointAt(0.5); // Get the midpoint of the line
-        // Offset the label slightly perpendicular to the line
-        qreal offsetX = 10 * sin(angle);
-        qreal offsetY = -10 * cos(angle);
-        text->setPos(midPoint.x() + offsetX, midPoint.y() + offsetY);
-        arrowGroup->addToGroup(text); // Add label to the group
-    }
-
-    // --- Finalize Group ---
-    arrowGroup->setFlag(QGraphicsItem::ItemIsSelectable); // Make the whole group selectable
-    scene->addItem(arrowGroup); // Add the complete group to the scene
-
-    qDebug() << "Arrow/Loop group added to scene for transition ID:" << transitionId;
-}
 
 
 /**
@@ -1144,6 +1076,129 @@ void MainWindow::unhighlightItem(QGraphicsItemGroup* item) {
      // Or remove effect:
      // item->setGraphicsEffect(nullptr);
 }
+
+
+QGraphicsItemGroup* MainWindow::drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene) {
+   
+
+    // --- Common Arrow Properties ---
+    QPen arrowPen(Qt::red, 2); // Pen for the arrow line and head
+    qreal arrowSize = 10;      // Size of the arrowhead
+
+    // --- Create a group for the entire transition representation ---
+    QGraphicsItemGroup *arrowGroup = new QGraphicsItemGroup();
+
+    // --- Store Transition ID in the group ---
+    arrowGroup->setData(0, "Transition"); // Item type identifier
+    arrowGroup->setData(1, QVariant(transitionId)); // Store the actual transition ID
+    // Optional: Store start/end state names if needed for selection, passed as extra args
+    // arrowGroup->setData(2, QVariant(startStateName));
+    // arrowGroup->setData(3, QVariant(targetStateName));
+
+
+    // Check if start and end points are the same (or very close) for self-loop
+    // Use a small tolerance for floating point comparison
+    if (QLineF(startPos, endPos).length() < 1.0) {
+        // --- Draw Self-Loop (Arc) ---
+        qDebug() << "Drawing self-loop at" << startPos << "ID:" << transitionId;
+
+        // Define loop parameters relative to the point
+        qreal radiusX = 30; // Fixed size loop radius
+        qreal radiusY = 30;
+        // Position the loop slightly above the point
+        QPointF loopTopCenter(startPos.x(), startPos.y() - radiusY * 1.2); // Adjust vertical offset
+
+        // Create the path for the arc
+        QPainterPath loopPath;
+        qreal startAngle = 210; qreal spanAngle = -240;
+        QRectF arcRect(loopTopCenter.x() - radiusX, loopTopCenter.y() - radiusY, 2 * radiusX, 2 * radiusY);
+        loopPath.arcMoveTo(arcRect, startAngle);
+        loopPath.arcTo(arcRect, startAngle, spanAngle);
+        QGraphicsPathItem* loopItem = new QGraphicsPathItem(loopPath);
+        loopItem->setPen(arrowPen);
+        arrowGroup->addToGroup(loopItem);
+
+        // Arrowhead for loop
+        QPointF loopEnd = loopPath.currentPosition();
+        qreal angle = loopPath.angleAtPercent(1.0);
+        QPointF arrowLP1 = loopEnd + QPointF(qSin(qDegreesToRadians(-angle) + M_PI / 3) * arrowSize, qCos(qDegreesToRadians(-angle) + M_PI / 3) * arrowSize);
+        QPointF arrowLP2 = loopEnd + QPointF(qSin(qDegreesToRadians(-angle) + M_PI - M_PI / 3) * arrowSize, qCos(qDegreesToRadians(-angle) + M_PI - M_PI / 3) * arrowSize);
+        QPolygonF arrowLHead; arrowLHead << loopEnd << arrowLP1 << arrowLP2;
+        QGraphicsPolygonItem *arrowLHeadItem = new QGraphicsPolygonItem(arrowLHead);
+        arrowLHeadItem->setPen(arrowPen); arrowLHeadItem->setBrush(Qt::red);
+        arrowGroup->addToGroup(arrowLHeadItem);
+
+        // Label for loop
+        QGraphicsTextItem* textL = new QGraphicsTextItem(label);
+        QRectF textLRect = textL->boundingRect();
+        textL->setPos(loopTopCenter.x() - textLRect.width() / 2, loopTopCenter.y() - radiusY - textLRect.height() - 2);
+        arrowGroup->addToGroup(textL);
+
+    } else {
+        // --- Draw Curved Arrow ---
+        qDebug() << "Drawing curved arrow from" << startPos << "to" << endPos << "ID:" << transitionId;
+
+        // Line connecting the provided start and end points
+        QLineF line(startPos, endPos);
+
+        // Create the path object
+        QPainterPath curvePath;
+        curvePath.moveTo(startPos); // Start at the start point
+
+        // Calculate control point for the quadratic Bezier curve
+        QPointF midPoint = line.pointAt(0.5);
+        QPointF delta = endPos - startPos;
+        QPointF perp(delta.y(), -delta.x()); // Perpendicular vector
+        qreal perpLength = QLineF(QPointF(0,0), perp).length();
+        QPointF normPerp = (perpLength > 0) ? (perp / perpLength) : QPointF(0, -1);
+        qreal curveFactor = (endPos.x() > startPos.x()) ? -1.0 : 1.0; // Determine curve direction
+        qreal curveMagnitude = qMin(line.length() * 0.2, 40.0); // Bend amount
+        QPointF controlPoint = midPoint + normPerp * curveMagnitude * curveFactor;
+
+        // Add the quadratic curve to the path
+        curvePath.quadTo(controlPoint, endPos);
+
+        // Create a QGraphicsPathItem for the curve
+        QGraphicsPathItem* curveItem = new QGraphicsPathItem(curvePath);
+        curveItem->setPen(arrowPen);
+        arrowGroup->addToGroup(curveItem); // Add curve to the group
+
+        // --- Calculate Arrowhead for the curve ---
+        // Use angle of the line segment from control point to end point
+        QLineF endSegment(controlPoint, endPos);
+        qreal angleDeg = endSegment.angle(); // Angle in degrees
+        double angleRad = qDegreesToRadians(-angleDeg); // Convert for trig functions
+
+        QPointF arrowP1 = endPos + QPointF(cos(angleRad - M_PI / 6.0) * arrowSize,
+                                           sin(angleRad - M_PI / 6.0) * arrowSize);
+        QPointF arrowP2 = endPos + QPointF(cos(angleRad + M_PI / 6.0) * arrowSize,
+                                           sin(angleRad + M_PI / 6.0) * arrowSize);
+
+        QPolygonF arrowHead;
+        arrowHead << endPos << arrowP1 << arrowP2; // Points for the triangle
+        QGraphicsPolygonItem *arrowHeadItem = new QGraphicsPolygonItem(arrowHead);
+        arrowHeadItem->setPen(arrowPen);
+        arrowHeadItem->setBrush(Qt::red); // Fill the arrowhead
+        arrowGroup->addToGroup(arrowHeadItem); // Add arrowhead to the group
+
+        // --- Position Label for the curve ---
+        QGraphicsTextItem* text = new QGraphicsTextItem(label);
+        QPointF labelPos = curvePath.pointAtPercent(0.5); // Midpoint of the curve path
+        text->setPos(labelPos + normPerp * (curveFactor > 0 ? 10 : -15)); // Offset label
+        arrowGroup->addToGroup(text); // Add label to the group
+    }
+
+    // --- Finalize Group ---
+    arrowGroup->setFlag(QGraphicsItem::ItemIsSelectable); // Make the whole group selectable
+     // Add the complete group to the scene
+
+    qDebug() << "Arrow/Loop group added to scene for transition ID:" << transitionId;
+    scene->addItem(arrowGroup); // Add the group to the scene
+    return arrowGroup; // Return the created group
+}
+
+
+
 
 
 

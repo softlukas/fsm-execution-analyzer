@@ -22,6 +22,7 @@ SOURCES += \
     json_conversions.cpp \
     CodeGenerator.cpp \
     mainwindowUtils.cpp \
+    StateGraphicItem.cpp \
     # Add any other .cpp files here
 
 # List all header files explicitly
@@ -40,6 +41,7 @@ HEADERS += \
     json_conversions.h \
     CodeGenerator.h \
     mainWindowUtils.h \
+    StateGraphicItem.h \
     # As seen in the image, maybe rename/replace later?
     # Add any other .h files here
 
