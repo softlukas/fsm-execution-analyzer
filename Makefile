@@ -45,7 +45,9 @@ clean:
 
 # Cieľ pre Doxygen (zostáva rovnaký)
 doxygen:
-	# ... (príkazy pre doxygen) ...
+	@echo ">>> Generating documentation with Doxygen..."
+	doxygen Doxyfile
+	@echo "<<< Documentation generated in $(DOC_DIR)/html"
 
 # Cieľ pre Pack (zostáva podobný, kopíruješ aj nové .pro súbory)
 pack: clean
