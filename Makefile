@@ -34,7 +34,7 @@ $(GUI_TARGET): $(MAIN_PRO_FILE) $(SRC_DIR)/**/*.* FORCE
 	@echo ">>> Building project using main SUBDIRS project..."
 	$(MKDIR) $(BUILD_DIR)
 	cd $(BUILD_DIR) && $(QMAKE) $(CURDIR)/$(MAIN_PRO_FILE) -o Makefile # Generuj hlavný Makefile v build
-	$(MAKE) -C $(BUILD_DIR) -j$(shell nproc) # Spusti make v build (ten zavolá make pre subdirs)
+	$(MAKE) -C $(BUILD_DIR)  # Spusti make v build (ten zavolá make pre subdirs)
 	@echo "<<< Project built successfully. GUI Tool: $(GUI_TARGET)"
 
 # Cieľ pre vyčistenie
