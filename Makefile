@@ -26,7 +26,7 @@ GUI_TARGET = $(BUILD_DIR)/gui_app/$(GUI_EXEC_NAME) # Cesta k GUI v podprojekte
 # --- Hlavné Ciele ---
 
 # Predvolený cieľ: Zostaví celý projekt (runtime knižnicu a potom GUI)
-all: $(GUI_TARGET) # Závisí od finálneho produktu
+all: clean $(GUI_TARGET) # Závisí od finálneho produktu
 
 # Pravidlo pre zostavenie všetkého
 # Spustí qmake na hlavný .pro a potom make

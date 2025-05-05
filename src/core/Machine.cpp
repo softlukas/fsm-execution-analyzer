@@ -126,6 +126,17 @@ const std::string& Machine::getName() const {
     return machineName;
 }
 
+void Machine::setName(const std::string& newName) {
+    if (newName.empty()) {
+        // Prípadne vyhodiť výnimku alebo len varovať
+        std::cerr << "Warning: Attempted to set empty machine name." << std::endl;
+        return;
+    }
+    // TODO: Prípadná validácia mena (napr. povolené znaky)
+    this->machineName = newName;
+    std::cout << "Machine renamed to '" << this->machineName << "'" << std::endl;
+}
+
 /**
  * @brief Gets a pointer to the initial state.
  * @return const State* Pointer to the initial state, or nullptr if not set/found.

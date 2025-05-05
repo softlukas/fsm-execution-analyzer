@@ -9,17 +9,30 @@
 
 std::string MainWindowUtils::ProccessOneArgumentDialog(const std::string& textToDisplay) {
 
-    
-    bool okClicked;
-    QString input = QInputDialog::getText(nullptr, "Enter " + QString::fromStdString(textToDisplay),
-                                          QString::fromStdString(textToDisplay), QLineEdit::Normal,
-                                          "", &okClicked);
-    if (!okClicked || input.trimmed().isEmpty()) {
-        qDebug() << "Dialog cancelled or empty input.";
-        return nullptr; // Return an empty string if cancelled or no input
+    QInputDialog dialog;
+    dialog.setWindowTitle("Enter " + QString::fromStdString(textToDisplay));
+    dialog.setLabelText(QString::fromStdString(textToDisplay));
+
+    // Nastavíme väčšie písmo
+    QFont font = dialog.font();
+    font.setPointSize(16);
+    dialog.setFont(font);
+
+    // Nastavíme väčšiu minimálnu veľkosť okna
+    dialog.setMinimumSize(350, 350);
+
+    // Zobrazíme dialóg
+    if (dialog.exec() == QDialog::Accepted) {
+        QString input = dialog.textValue();
+        if (!input.trimmed().isEmpty()) {
+            return input.trimmed().toStdString();
+        }
     }
-    return input.trimmed().toStdString();
+
+    qDebug() << "Dialog cancelled or empty input.";
+    return "";  // Namiesto nullptr - prázdny string je bezpečnejší
 }
+
 
 /*
 QGraphicsItemGroup* MainWindowUtils::drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene) {

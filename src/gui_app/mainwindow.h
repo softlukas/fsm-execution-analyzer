@@ -7,6 +7,9 @@
 #include "core/Machine.h"        // Include Automaton header
 #include <memory>             // For std::unique_ptr
 // #include "GraphicsView.h" // Include the custom view header - uncomment if using custom GraphicsView
+#include <QUdpSocket> // Potrebný include
+#include <QMap>
+#include <QColor> // Pre farby
 
 // Forward declaration for the UI class (generated from .ui file)
 QT_BEGIN_NAMESPACE
@@ -69,9 +72,9 @@ private slots:
     void on_loadJsonButton_clicked();
 
     void on_runAutomatButton_clicked();
-
-    void on_mainMenuButton_clicked();
-    void on_editFieldsButton_clicked();
+    void on_terminateAutomatButton_clicked();
+    void on_connectButton_clicked();
+    void on_renameButton_clicked();
     
 
     QGraphicsItemGroup* drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene, QVariant *actualStartPos, QVariant *actualEndPos);
@@ -81,6 +84,7 @@ private slots:
     // use this slot connected to scene's selectionChanged signal instead:
     // void on_scene_selectionChanged();
 
+    void processPendingDatagrams(); // Slot na spracovanie UDP správ
 
     
 
@@ -89,6 +93,21 @@ private:
 
     std::string portGUI;
     std::string portAutomat;
+    QUdpSocket *guiSocket_ = nullptr;
+
+    bool waitingForAutomatonInfo = false; // Flag for connection state
+    QString connectedAutomatonName = "";   // Store name once connected
+    QTimer *connectionTimeoutTimer = nullptr; // Optional: For timeout
+
+    // Definuj farby (zostáva)
+    const QColor normalStateColor = Qt::cyan;
+    const QColor activeStateColor = Qt::green;
+
+    void updateStateItemColor(QGraphicsItemGroup* item, const QColor& color);
+
+    void updateVariableDisplay(const std::string& varName, const std::string& newValue);
+    void updateOutputDisplay(const std::string& outputName, const std::string& newValue);
+
 
     /**
      * @brief Visually highlights a state item.
@@ -139,7 +158,13 @@ private:
 
     //void createTransition(const std::string& startStateName, const std::string& endStateName);
     
+    void bindGuiSocket();
 
+    void clearVariableList();
+    void clearInputList();
+    void clearOutputList();   // ak používaš
+    void redrawAutomatonFromModel();
+    void populateUIFromModel();
 
     Ui::MainWindow *ui;    // Pointer to the UI elements defined in mainwindow.ui
     QGraphicsScene *scene; // The scene where graphics items will be drawn

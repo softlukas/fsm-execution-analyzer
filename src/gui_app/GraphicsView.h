@@ -42,6 +42,7 @@ protected:
      * @param event The mouse event details.
      */
     void mousePressEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event);
 };
 
 #endif // GRAPHICSVIEW_H

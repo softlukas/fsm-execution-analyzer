@@ -125,23 +125,30 @@ void executeCurrentStateAction() {
         {% endfor %}
         case State::STATE_NULL: break;
     }
+
+    {% for var in variables %}
+    { 
+        std::stringstream ss;
+        ss << {{ var.name }};
+        engine.sendVarUpdate("{{ var.name }}", ss.str());
+    } 
+    {% endfor %}
 }
 
 void performStateTransition(State nextState) {
     std::string currentSName = stateEnumToName.count(currentState) ? stateEnumToName.at(currentState) : "NULL";
     std::string nextStateName = stateEnumToName.count(nextState) ? stateEnumToName.at(nextState) : "NULL";
-    
+    engine.cancelAllTimers(); // <<< ZRUŠ ČASOVAČE TU
     if (currentState != nextState) {
         std::cout << "[TRANSITION] Changing state from " << currentSName << " to " << nextStateName << std::endl;
         std::cout << "[TIMER] Cancelling all scheduled timers due to state change." << std::endl;
-        engine.cancelAllTimers(); // <<< ZRUŠ ČASOVAČE TU
-        currentState = nextState;
-        executeCurrentStateAction(); // Vykonaj akciu nového stavu
+                
     } else {
         std::cout << "[TRANSITION] Self-transition in state " << currentSName << std::endl;
         // Pri self-prechode nerušíme časovače a len znovu vykonáme akciu
-        executeCurrentStateAction(); 
     }
+    currentState = nextState;
+    executeCurrentStateAction(); // Vykonaj akciu nového stavu
 }
 
 bool processTransitions(std::optional<std::pair<std::string, std::string>> event) {
@@ -157,9 +164,10 @@ bool processTransitions(std::optional<std::pair<std::string, std::string>> event
             switch(currentState) {
                 {% for state in states %}
                 case State::{{ state.enum_id }}: {
+                    bool guard_ok;
                      {% for trans in transitions %}
                         {% if trans.source == state.name and not trans.event %} // Podľa pôvodného mena stavu a neexistencie eventu
-                            bool guard_ok = true;
+                            guard_ok = true;
                             {% if trans.guard and trans.guard != "" %}
                                 guard_ok = check_guard_{{ trans.template_index0 }}(); // <<< Volaj správnu guard funkciu
                             {% endif %}
@@ -207,11 +215,12 @@ bool processTransitions(std::optional<std::pair<std::string, std::string>> event
             State next_state_event_candidate = currentState;
             switch(currentState){
                  {% for state in states %}
-                 case State::{{ state.enum_id }}:
+                 case State::{{ state.enum_id }}:{
+                    bool guard_ok;
                      {% for trans in transitions %}
                             {% if trans.source == state.name and trans.event %}
                              if (eventName == "{{ trans.event }}") {
-                                bool guard_ok = true;
+                                guard_ok = true;
                                 {% if trans.guard and trans.guard != "" %} guard_ok = check_guard_{{ trans.template_index0 }}(); {% endif %}
                                 if(guard_ok) {
                                     {% if not trans.delay and not trans.delay_var_original %} // Okamžitý
@@ -237,6 +246,7 @@ bool processTransitions(std::optional<std::pair<std::string, std::string>> event
                      {% endfor %}
                      end_switch_event_{{ state.enum_id }}:;
                     break;
+            }
                  {% endfor %}
                  default: break;
             }
@@ -298,29 +308,37 @@ void handleErrorCallback(const std::string& errorMessage) {
 
 // Callback pre GET_STATUS (už si ho pridal, len pre kontext)
 void handleStatusRequestCallback() {
-    std::cout << "[Callback] Handling GET_STATUS request..." << std::endl;
     
+    std::cout << "[Callback] Handling GET_STATUS request..." << std::endl;
+
+    // 0. Pošli meno automatu (použije priamo sendMessage)
+    engine.sendMessage("NAME " + AUTOMATON_NAME); // <<< PRIDANÉ
+
     // 1. Pošli aktuálny stav automatu
     std::string currentSName = stateEnumToName.count(currentState) ? stateEnumToName.at(currentState) : "NULL";
     engine.sendStateUpdate(currentSName);
-    
+
     // 2. Pošli aktuálne hodnoty všetkých premenných
-    //    Použijeme Inja cyklus na vygenerovanie kódu pre každú premennú
     {% for var in variables %}
-    { // Vytvoríme blok pre platnosť premennej ss
+    {
         std::stringstream ss;
-        ss << {{ var.name }}; // Priamo pristupujeme k C++ premennej automatu
-        engine.sendVarUpdate("{{ var.name }}", ss.str()); // Pošleme meno a hodnotu
-    } 
+        ss << {{ var.name }};
+        engine.sendVarUpdate("{{ var.name }}", ss.str());
+    }
     {% endfor %}
 
-    // 3. (Voliteľné) Môžeš sem pridať aj posielanie posledných známych hodnôt vstupov/výstupov
-    //    ale posielanie premenných je najdôležitejšie pre 'GET_STATUS'.
-    /* 
+    // 3. (Voliteľné) Posielanie posledných vstupov/výstupov
+    //    Môže byť užitočné pre kompletný obraz stavu
+    /*
     for(const auto& pair : lastInputValues) {
-        engine.sendInputUpdate(pair.first, pair.second); // Potrebuješ sendInputUpdate v Engine
+         // Potrebovali by sme sendInputUpdate, alebo použiť všeobecný sendMessage
+         engine.sendMessage("INPUT_LAST " + pair.first + "=\"" + pair.second + "\"");
     }
-    // Pre výstupy by si potreboval ukladať poslednú hodnotu
+    // Pre výstupy by si musel ukladať poslednú hodnotu v šablóne
+    // std::map<std::string, std::string> lastOutputValues;
+    // for(const auto& pair : lastOutputValues) {
+    //     engine.sendOutputUpdate(pair.first, pair.second); // Alebo sendMessage
+    // }
     */
 
     std::cout << "[Callback] Status sent." << std::endl;

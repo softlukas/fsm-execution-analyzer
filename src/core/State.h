@@ -61,7 +61,6 @@ public:
         outgoingTransitions.insert({transitionGroup->data(0).toInt(), std::make_tuple(transitionGroup, data1, data2)});
     }
 
-
     // Potentially other methods in the future...
     // E.g., for working with transitions, if you decide the state should know its transitions
 

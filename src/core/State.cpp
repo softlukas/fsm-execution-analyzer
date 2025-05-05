@@ -34,7 +34,7 @@
      return stateId;
  }
  
- 
+
  void State::updateTransitionPositions(QGraphicsScene* scene) {
      // Declare incomingTransitions as a placeholder for demonstration
      

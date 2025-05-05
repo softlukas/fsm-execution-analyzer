@@ -8,11 +8,32 @@
 
 // ... Constructors ...
 GraphicsView::GraphicsView(QWidget *parent)
-    : QGraphicsView(parent) {}
+    : QGraphicsView(parent) {
+        setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+        setResizeAnchor(QGraphicsView::AnchorUnderMouse);
+        setDragMode(QGraphicsView::ScrollHandDrag);
+    }
 
 GraphicsView::GraphicsView(QGraphicsScene *scene, QWidget *parent)
-    : QGraphicsView(scene, parent) {}
+    : QGraphicsView(scene, parent) {
+        setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+        setResizeAnchor(QGraphicsView::AnchorUnderMouse);
+        setDragMode(QGraphicsView::ScrollHandDrag);
+    }
 
+void GraphicsView::wheelEvent(QWheelEvent *event) {
+    // Faktor škálovania pre jeden krok kolieska (napr. 15%)
+    const qreal scaleFactor = 1.15;
+
+    if (event->angleDelta().y() > 0) {
+        // Zoom In
+        scale(scaleFactor, scaleFactor);
+    } else if (event->angleDelta().y() < 0) {
+        // Zoom Out
+        scale(1.0 / scaleFactor, 1.0 / scaleFactor);
+    }
+    // event->accept(); // Môžeš nechať alebo odstrániť, ak nechceš explicitne zastaviť šírenie
+}
 
 /**
  * @brief Handles mouse press events within the view.

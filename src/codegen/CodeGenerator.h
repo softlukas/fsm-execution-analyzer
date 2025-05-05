@@ -1,74 +1,68 @@
+/**
+ * @file CodeGenerator.h
+ * @brief Defines the CodeGenerator class responsible for generating C++ interpreter code.
+ * @authors Your Authors (xsiaket00, xsimonl00)
+ * @date 2025-05-05 // Date of last modification
+ */
+
 #ifndef CODEGENERATOR_H
 #define CODEGENERATOR_H
 
-#include <string>    // Pre std::string
-#include <stdexcept> // Pre std::runtime_error (ako základ pre našu výnimku)
+#include <string>
+#include <stdexcept>
 
-// Forward deklarácia triedy Machine, aby sme nemuseli includovať celý Machine.h
-// To znižuje závislosti hlavičky CodeGenerator.h.
+
 class Machine;
 
 /**
- * @brief Zodpovedá za generovanie C++ kódu interpreta pre daný automat
- *        pomocou šablónovacieho enginu Inja.
- * @details Načíta šablónu, prevedie Machine objekt na JSON dáta (pomocou
- *          externých to_json funkcií) a vyrenderuje výsledný kód.
+ * @brief Responsible for generating C++ interpreter code for a given automaton
+ *        using the Inja templating engine.
+ * @details Loads a template file, receives the automaton's definition via a JSON file path,
+ *          and renders the final code by combining the template and the JSON data.
  */
 class CodeGenerator {
 public:
     /**
-     * @brief Špecifická trieda výnimky pre chyby počas generovania kódu.
+     * @brief Custom exception class for errors occurring during code generation.
+     * @details Inherits from std::runtime_error.
      */
     class GenerationError : public std::runtime_error {
     public:
-        // Konštruktor preberá chybovú správu
+        /**
+         * @brief Constructs a GenerationError exception.
+         * @param msg The error message detailing the cause of the failure.
+         */
         explicit GenerationError(const std::string& msg) : std::runtime_error(msg) {}
     };
 
     /**
-     * @brief Konštruktor.
-     * @param templatePath Cesta k súboru so šablónou Inja (napr. "templates/automaton.tpl").
-     * @throws GenerationError Ak sa súbor so šablónou nedá prečítať alebo je neplatný
-     *         (aj keď kontrola sa reálne deje až v metóde generate).
+     * @brief Constructs a CodeGenerator instance.
+     * @param templatePath The path to the Inja template file (e.g., "templates/automaton.tpl").
      */
     explicit CodeGenerator(const std::string& templatePath);
 
     /**
-     * @brief Vygeneruje C++ kód pre daný automat.
-     * @param machine Konštantná referencia na objekt Machine, pre ktorý sa má kód generovať.
-     * @return std::string Vygenerovaný C++ kód ako reťazec.
-     * @throws GenerationError Ak nastane chyba počas načítania šablóny, konverzie dát na JSON,
-     *         alebo renderovania šablóny.
-     * @throws nlohmann::json::exception Ak zlyhá konverzia Machine -> JSON (propaguje výnimku).
+     * @brief Generates the C++ code for the specified automaton based on its JSON definition.
+     * @param machine A constant reference to the Machine object (currently used for logging its name).
+     * @param jsonDefinitionPath The path to the JSON file containing the automaton's definition.
+     * @return std::string The generated C++ code as a string.
+     * @throws GenerationError If an error occurs during template loading, JSON file reading/parsing,
+     *         or template rendering.
+     * @throws nlohmann::json::exception If JSON parsing fails (propagated from the nlohmann library).
      */
     std::string generate(const Machine& machine, const std::string& jsonDefinitionPath);
 
-    // --- Voliteľné Metódy ---
-    // Môžeš pridať metódy na nastavenie globálnych premenných pre šablónu,
-    // registráciu vlastných callbackov/filtrov pre Inja atď., ak by si potreboval.
-    // void setGlobalData(const nlohmann::json& data);
-    // void registerInjaCallback(const std::string& name, /* ... typ callbacku ... */);
-
-
-    // Zákaz kopírovania a presúvania (ak nemá zmysel kopírovať generátor)
     CodeGenerator(const CodeGenerator&) = delete;
     CodeGenerator& operator=(const CodeGenerator&) = delete;
-    CodeGenerator(CodeGenerator&&) = delete; // Alebo povoliť presun, ak treba
-    CodeGenerator& operator=(CodeGenerator&&) = delete; // Alebo povoliť presun
+    CodeGenerator(CodeGenerator&&) = delete;
+    CodeGenerator& operator=(CodeGenerator&&) = delete;
 
 private:
     /**
-     * @brief Cesta k súboru so šablónou.
+     * @brief Stores the file path to the Inja template.
      */
     std::string templateFilePath;
 
-    /**
-     * @brief Inja prostredie (voliteľný člen).
-     * Ak nepotrebuješ špeciálnu konfiguráciu (napr. vlastné filtre/callbacky),
-     * nemusíš ho držať ako člena a stačí vytvoriť lokálne v metóde generate().
-     * Ak ho chceš konfigurovať v konštruktore, ulož si ho sem.
-     */
-    // inja::Environment env_; // Odkomentuj, ak potrebuješ konfigurovateľné prostredie
 };
 
 #endif // CODEGENERATOR_H

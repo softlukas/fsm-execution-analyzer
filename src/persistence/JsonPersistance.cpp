@@ -1,39 +1,41 @@
 /**
  * @file JsonPersistence.cpp
- * @brief Implementation of the JsonPersistence class using nlohmann/json.
+ * @brief Implementation of the JsonPersistence class using nlohmann/json for serialization/deserialization.
+ * @authors Your Authors (xsiaket00, xsimonl00)
+ * @date 2025-05-05 // Date of last modification
  */
-#include "JsonPersistance.h" // Zmenený názov headeru
+
+#include "JsonPersistance.h"
 #include "core/Machine.h"
 #include "nlohmann/json.hpp"
 #include <fstream>
-#include <iostream> // Pre std::cerr/cout
-#include <stdexcept> // Pre std::runtime_error
+#include <iostream>
+#include <stdexcept>
+#include <QDebug>
+#include "json_conversions.h"
 
-// Include súbor s to_json / from_json funkciami
-#include "json_conversions.h" // <- Sem si dal tie funkcie vyššie
-
+// Use alias for nlohmann::json
 using json = nlohmann::json;
 
-/**
- * @brief Saves the machine definition to a JSON file using nlohmann/json.
- */
 bool JsonPersistence::saveToFile(const Machine& machine, const std::string& filename) {
     std::cout << "Attempting to save machine '" << machine.getName() << "' to JSON file: " << filename << std::endl;
     try {
-        // --- 1. Prevod na nlohmann::json objekt v pamäti ---
-        // Toto automaticky zavolá tvoju funkciu: to_json(json& j, const Machine& m)
+        // Convert the Machine object to a nlohmann::json object
+        // This implicitly calls the `to_json(json& j, const Machine& m)` function
+        // defined in "json_conversions.cpp".
         json machine_json = machine;
 
-        // --- 2. Zápis do súboru ---
+        // Write the JSON object to the specified file
         std::ofstream outFile(filename);
         if (!outFile.is_open()) {
             std::cerr << "Error: Could not open file for writing JSON: " << filename << std::endl;
             return false;
         }
-        // Zapíš pekne formátovaný JSON (s odsadením 2 medzery)
-        // Použi .dump() metódu z nlohmann/json
+
+        // Write the JSON data to the file with pretty printing (indentation of 2 spaces).
+        // Use the dump() method from nlohmann/json.
         outFile << machine_json.dump(2);
-        outFile.close();
+        outFile.close(); // Close the file stream
 
         std::cout << "Machine successfully saved to JSON: " << filename << std::endl;
         return true;
@@ -42,48 +44,62 @@ bool JsonPersistence::saveToFile(const Machine& machine, const std::string& file
         std::cerr << "Error during JSON serialization or file writing: " << e.what() << std::endl;
         return false;
     } catch (const std::exception& e) {
-        // Zachytenie iných potenciálnych chýb
         std::cerr << "An unexpected error occurred during saving: " << e.what() << std::endl;
         return false;
     }
 }
 
-/**
- * @brief Loads the machine definition from a JSON file using nlohmann/json.
- * @param filename The path to the JSON file to load.
- * @return std::unique_ptr<Machine> A pointer to the loaded Machine object, or nullptr on failure.
- */
 std::unique_ptr<Machine> JsonPersistence::loadFromFile(const std::string& filename) {
-    /*
-    std::cout << "Attempting to load machine from JSON file: " << filename << std::endl;
+
+    qDebug() << "Attempting to load machine from JSON file:" << QString::fromStdString(filename); // Use qDebug
     try {
-        // --- 1. Načítanie a parsovanie súboru ---
+        // Read and parse the JSON file
         std::ifstream inFile(filename);
         if (!inFile.is_open()) {
-             std::cerr << "Error: Could not open file for reading JSON: " << filename << std::endl;
+             qCritical() << "Error: Could not open file for reading JSON:" << QString::fromStdString(filename); // Use qCritical
             return nullptr;
         }
-        json loaded_json;
-        inFile >> loaded_json;
+        json loaded_json; // Create a json object to store the parsed data
+        
+        // Parse the file content into the json object.
+        // Catch parsing errors specifically.
+        try {
+            inFile >> loaded_json;
+        } catch (const json::parse_error& e) {
+            inFile.close();
+            qCritical() << "Error parsing JSON file:" << QString::fromStdString(filename) << "-" << e.what();
+            return nullptr;
+        }
         inFile.close();
+        qDebug() << "JSON file parsed successfully.";
 
-        // --- 2. Vytvor nový Machine objekt a naplň ho pomocou from_json ---
-        // Získaj meno z JSONu pre konštruktor Machine
+        // Create a new Machine object and populate it using from_json 
+        // Extract the machine name from the JSON data (use default if not found)
         std::string machineName = loaded_json.value("automaton_name", "UnnamedMachine");
+        qDebug() << "Creating Machine object for:" << QString::fromStdString(machineName);
+        // Create a new Machine instance owned by a unique_ptr
         auto machine_ptr = std::make_unique<Machine>(machineName);
 
-        // Zavolaj from_json, ktorá naplní už existujúci objekt
-        from_json(loaded_json, *machine_ptr); // Odovzdaj dereferencovaný pointer (referenciu)
+        // Call the custom `from_json` function (from json_conversions.cpp)
+        // This function populates the already existing Machine object (*machine_ptr).
+        qDebug() << "Calling from_json(json, Machine)...";
+        from_json(loaded_json, *machine_ptr); // Pass the Machine object by reference
+        qDebug() << "from_json(json, Machine) finished.";
 
-        std::cout << "Machine successfully loaded from JSON: " << filename << std::endl;
+        qInfo() << "Machine successfully loaded from JSON:" << QString::fromStdString(filename);
         return machine_ptr; // Vráť unique_ptr
 
     } catch (const json::exception& e) {
-         std::cerr << "Error during JSON parsing or conversion: " << e.what() << std::endl;
+        // Catch errors during JSON *access* (e.g., .at(), .value()) within from_json
+         qCritical() << "Error during JSON data access/conversion:" << e.what() << "in file:" << QString::fromStdString(filename);
         return nullptr;
     } catch (const std::exception& e) {
-         std::cerr << "An unexpected error occurred during loading: " << e.what() << std::endl;
+        // Catch other standard exceptions (e.g., from std::make_unique, map operations)
+         qCritical() << "An unexpected standard error occurred during loading:" << e.what() << "from file:" << QString::fromStdString(filename);
+        return nullptr;
+    } catch (...) {
+        // Catch any other unknown exceptions
+        qCritical() << "An unknown error occurred during loading from file:" << QString::fromStdString(filename);
         return nullptr;
     }
-        */
 }

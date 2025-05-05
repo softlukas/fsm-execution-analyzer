@@ -59,7 +59,8 @@ public:
     bool recordOutputValue(const std::string& name, const std::string& value); // Renamed for clarity
     std::optional<std::string> getLastOutputValue(const std::string& name) const;
 
-   
+    void setName(const std::string& newName); // Deklarácia
+
 
     // --- Interpreter logic ---
 

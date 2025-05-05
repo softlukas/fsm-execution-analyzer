@@ -1,37 +1,45 @@
+/**
+ * @file CodeGenerator.cpp
+ * @brief Implements the CodeGenerator class for generating C++ automaton interpreter code.
+ * @authors Your Authors (xsiaket00, xsimonl00)
+ * @date 2025-05-05 // Date of last modification
+ */
+
 #include "CodeGenerator.h"
 #include "core/Machine.h"
-#include "nlohmann/json.hpp" // Potrebuješ pre json objekt
-#include "inja/inja.hpp"     // Potrebuješ pre renderovanie
-#include <fstream>           // Pre čítanie šablóny
-#include <iostream>          // Pre debug
-#include <stdexcept>         // Pre výnimky
-
-// Include súbor s to_json funkciami
-#include "persistence/json_conversions.h" // <- Tu máš definované to_json
+#include "nlohmann/json.hpp"
+#include "inja/inja.hpp"
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+#include "persistence/json_conversions.h"
 
 using json = nlohmann::json;
 
+/**
+ * @brief Constructs a CodeGenerator instance.
+ * @param templatePath The file path to the Inja template used for code generation.
+ */
 CodeGenerator::CodeGenerator(const std::string& templatePath)
     : templateFilePath(templatePath) {}
 
+/**
+ * @brief Generates C++ source code for the automaton interpreter based on a JSON definition file.
+ * @details Reads the automaton structure from the specified JSON file, loads the Inja template,
+ *          and renders the template using the parsed JSON data.
+ * @param machine The Machine object instance (currently used only for logging the name).
+ * @param jsonDefinitionPath The file path to the JSON file containing the automaton's definition.
+ * @return std::string A string containing the generated C++ source code.
+ * @throws CodeGenerator::GenerationError If reading the JSON file, parsing the JSON, loading the template,
+ *         or rendering the template fails.
+ */
 std::string CodeGenerator::generate(const Machine& machine, const std::string& jsonDefinitionPath) {
     std::cout << "[CodeGen] Starting code generation for machine: " << machine.getName() << std::endl;
     std::cout << "[CodeGen] Using template: " << templateFilePath << std::endl;
 
-    // --- 1. Preveď Machine na nlohmann::json ---
-    /*json machine_data;
-    try {
-        to_json(machine_data, machine); // <<< Zavolaj tvoju to_json funkciu
-        // Debug výpis JSON dát (voliteľné, ale užitočné)
-        // std::cout << "[CodeGen] JSON data:\n" << machine_data.dump(2) << std::endl;
-    } catch (const json::exception& e) {
-        std::cerr << "[CodeGen] Error converting Machine to JSON: " << e.what() << std::endl;
-        throw GenerationError(std::string("JSON conversion failed: ") + e.what());
-    }*/
 
-    // --- 1. Read and Parse JSON data from file ---
     json machine_data;
-    const std::string jsonFilePath = jsonDefinitionPath; // Hardcoded filename
+    const std::string jsonFilePath = jsonDefinitionPath;
 
     try {
         std::ifstream inFile(jsonFilePath);
@@ -39,36 +47,32 @@ std::string CodeGenerator::generate(const Machine& machine, const std::string& j
             throw GenerationError("Could not open JSON file for reading: " + jsonFilePath);
         }
 
-        // Parse the JSON directly from the input stream
+        // Parse the JSON directly from the input stream into the json object
         inFile >> machine_data;
-        inFile.close(); // Good practice, though destructor handles it
+        inFile.close();
 
         std::cout << "[CodeGen] Successfully loaded and parsed JSON from: " << jsonFilePath << std::endl;
-        // Debug výpis JSON dát (voliteľné, ale užitočné)
-        // std::cout << "[CodeGen] JSON data:\n" << machine_data.dump(2) << std::endl;
 
     } catch (const json::parse_error& e) {
-        // Catch errors specifically from nlohmann::json parsing
-        std::cerr << "[CodeGen] Error parsing JSON file '" << jsonFilePath << "': " << e.what() << std::endl;
+=        std::cerr << "[CodeGen] Error parsing JSON file '" << jsonFilePath << "': " << e.what() << std::endl;
         throw GenerationError(std::string("JSON parsing failed: ") + e.what());
     } catch (const std::exception& e) {
-        // Catch other potential errors (like file stream errors)
-        std::cerr << "[CodeGen] Error reading JSON file '" << jsonFilePath << "': " << e.what() << std::endl;
+=        std::cerr << "[CodeGen] Error reading JSON file '" << jsonFilePath << "': " << e.what() << std::endl;
         throw GenerationError(std::string("JSON file reading failed: ") + e.what());
     }
 
-    // --- 2. Načítaj a Spracuj Šablónu pomocou Inja ---
+    //Load Template and Render using Inja
     try {
-        inja::Environment env; // Vytvor Inja prostredie
-        // Načítaj šablónu zo súboru
+        inja::Environment env; // Create an Inja environment
+        // Load and parse the template file
         inja::Template code_template = env.parse_template(templateFilePath);
 
-        // Vyrenderuj šablónu s dátami
+        // Render the template using the parsed JSON data
         std::cout << "[CodeGen] Rendering template..." << std::endl;
-        std::string generated_code = env.render(code_template, machine_data); // <<< Kúzlo Inja!
+        std::string generated_code = env.render(code_template, machine_data);
         std::cout << "[CodeGen] Template rendered successfully." << std::endl;
 
-        return generated_code; // Vráť vygenerovaný C++ kód
+        return generated_code; // Return the generated C++ code as a string
 
     } catch (const std::exception& e) {
         std::cerr << "[CodeGen] Error processing template '" << templateFilePath << "': " << e.what() << std::endl;
