@@ -1,11 +1,11 @@
 #include "json_conversions.h"  // Include zodpovedajúcu hlavičku
 
-#include "Machine.h"           // Include potrebné core hlavičky
-#include "State.h"
-#include "Transition.h"
-#include "Variable.h"
-#include "Input.h"
-#include "Output.h"
+#include "core/Machine.h"           // Include potrebné core hlavičky
+#include "core/State.h"
+#include "core/Transition.h"
+#include "core/Variable.h"
+#include "core/Input.h"
+#include "core/Output.h"
 #include "nlohmann/json.hpp"   // <<< Až tu plný include json.hpp
 #include <string>
 #include <memory>

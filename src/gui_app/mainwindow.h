@@ -4,7 +4,7 @@
 #include <QMainWindow>
 #include <QGraphicsScene>
 #include <QGraphicsItemGroup> // Needed for pointer type
-#include "Machine.h"        // Include Automaton header
+#include "core/Machine.h"        // Include Automaton header
 #include <memory>             // For std::unique_ptr
 // #include "GraphicsView.h" // Include the custom view header - uncomment if using custom GraphicsView
 
@@ -74,7 +74,7 @@ private slots:
     void on_editFieldsButton_clicked();
     
 
-    QGraphicsItemGroup* drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene);
+    QGraphicsItemGroup* drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene, QVariant *actualStartPos, QVariant *actualEndPos);
 
 
     // If NOT using custom GraphicsView with stateItemClicked signal,
@@ -86,6 +86,10 @@ private slots:
 
 
 private:
+
+    std::string portGUI;
+    std::string portAutomat;
+
     /**
      * @brief Visually highlights a state item.
      * @param item The state item (group) to highlight.

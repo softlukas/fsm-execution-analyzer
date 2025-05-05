@@ -1,5 +1,5 @@
 #include "CodeGenerator.h"
-#include "Machine.h"
+#include "core/Machine.h"
 #include "nlohmann/json.hpp" // Potrebuješ pre json objekt
 #include "inja/inja.hpp"     // Potrebuješ pre renderovanie
 #include <fstream>           // Pre čítanie šablóny
@@ -7,14 +7,14 @@
 #include <stdexcept>         // Pre výnimky
 
 // Include súbor s to_json funkciami
-#include "json_conversions.h" // <- Tu máš definované to_json
+#include "persistence/json_conversions.h" // <- Tu máš definované to_json
 
 using json = nlohmann::json;
 
 CodeGenerator::CodeGenerator(const std::string& templatePath)
     : templateFilePath(templatePath) {}
 
-std::string CodeGenerator::generate(const Machine& machine) {
+std::string CodeGenerator::generate(const Machine& machine, const std::string& jsonDefinitionPath) {
     std::cout << "[CodeGen] Starting code generation for machine: " << machine.getName() << std::endl;
     std::cout << "[CodeGen] Using template: " << templateFilePath << std::endl;
 
@@ -31,7 +31,7 @@ std::string CodeGenerator::generate(const Machine& machine) {
 
     // --- 1. Read and Parse JSON data from file ---
     json machine_data;
-    const std::string jsonFilePath = "automaton.json"; // Hardcoded filename
+    const std::string jsonFilePath = jsonDefinitionPath; // Hardcoded filename
 
     try {
         std::ifstream inFile(jsonFilePath);

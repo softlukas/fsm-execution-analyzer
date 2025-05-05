@@ -46,6 +46,18 @@ public:
      */
     const std::string& getAction() const;
 
+    void updateTransitionsPositions(QGraphicsScene* scene);
+
+
+    void addIncomingTransitionGroup(QGraphicsItemGroup* transitionGroup, const QVariant& data1, const QVariant& data2) {
+        incomingTranstions.insert({transitionGroup->data(0).toInt(), std::make_tuple(transitionGroup, data1, data2)});
+    }
+
+    void addOutgoingTransitionGroup(QGraphicsItemGroup* transitionGroup, const QVariant& data1, const QVariant& data2) {
+        outgoingTransitions.insert({transitionGroup->data(0).toInt(), std::make_tuple(transitionGroup, data1, data2)});
+    }
+
+
     // Potentially other methods in the future...
     // E.g., for working with transitions, if you decide the state should know its transitions
 
@@ -54,6 +66,10 @@ private:
     std::string stateOutput; // Action assigned to the state (as a code string)
     const int stateId;
     bool isActive = false;
+    //QGraphicsItemGroup* stateGroup = nullptr;
+    std::map<int, std::tuple<QGraphicsItemGroup*, QVariant, QVariant>> incomingTranstions;
+    std::map<int, std::tuple<QGraphicsItemGroup*, QVariant, QVariant>> outgoingTransitions;
+
     //QGraphicsItemGroup * stateGroup = nullptr; // Pointer to the QGraphicsItemGroup representing the state in the scene
     // Potentially other member variables...
 };

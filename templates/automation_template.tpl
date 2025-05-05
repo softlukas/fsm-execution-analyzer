@@ -330,6 +330,38 @@ void handleStatusRequestCallback() {
 int main(int argc, char *argv[]) {
     std::cout << "Starting automaton: " << AUTOMATON_NAME << std::endl;
 
+    // --- Spracovanie argumentov pre porty ---
+    int listen_port = 9001; // Default port pre runtime (automat)
+    std::string gui_host = "127.0.0.1"; // Napevno localhost
+    int gui_port = 9000; // Default port pre GUI
+
+    if (argc == 3) { // Očakávame presne 2 argumenty: listen_port gui_port
+        try {
+            listen_port = std::stoi(argv[1]);
+            gui_port = std::stoi(argv[2]);
+            std::cout << "[Config] Using ports from command line: Runtime Listen=" << listen_port
+                      << ", GUI Target=" << gui_host << ":" << gui_port << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "[Config] ERROR: Invalid command line arguments. Usage: " << argv[0]
+                      << " <listen_port> <gui_port>" << std::endl;
+            std::cerr << "[Config] Falling back to default ports." << std::endl;
+            // Ponechaj defaultné hodnoty
+            listen_port = 9001;
+            gui_port = 9000;
+             std::cout << "[Config] Default ports: Runtime Listen=" << listen_port
+                      << ", GUI Target=" << gui_host << ":" << gui_port << std::endl;
+        }
+    } else if (argc != 1) { // Ak sú nejaké argumenty, ale nie presne 2
+         std::cerr << "[Config] WARNING: Incorrect number of arguments. Using default ports." << std::endl;
+         std::cout << "[Config] Usage: " << argv[0] << " <listen_port> <gui_port>" << std::endl;
+         std::cout << "[Config] Default ports: Runtime Listen=" << listen_port
+                  << ", GUI Target=" << gui_host << ":" << gui_port << std::endl;
+    } else { // Ak nie sú žiadne argumenty
+         std::cout << "[Config] No command line arguments provided. Using default ports: Runtime Listen=" << listen_port
+                  << ", GUI Target=" << gui_host << ":" << gui_port << std::endl;
+    }
+    // --- Koniec spracovania argumentov ---
+
     // Inicializácia máp (používa enum_id a pôvodné meno)
     stateNameToEnum["STATE_NULL"] = State::STATE_NULL;
     stateEnumToName[State::STATE_NULL] = "STATE_NULL";
@@ -348,7 +380,7 @@ int main(int argc, char *argv[]) {
 
     // Inicializácia a spustenie enginu (bez zmeny)
     // ... (engine.initialize, engine.setEventHandlers, executeCurrentStateAction, processTransitions, engine.run) ...
-    if (!engine.initialize(AUTOMATON_NAME, 9001, "127.0.0.1", 9000)) { 
+    if (!engine.initialize(AUTOMATON_NAME, listen_port, gui_host, gui_port)) { // <<< POUŽI PREMENNÉ 
     return 1; 
     }
      engine.setEventHandlers( handleEventCallback, handleTimeoutCallback, handleTerminationCallback, handleErrorCallback, handleStatusRequestCallback);

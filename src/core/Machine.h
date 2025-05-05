@@ -14,7 +14,7 @@
 #include "Variable.h"
 #include "Input.h"
 #include "Output.h"
-#include "StateGraphicItem.h"
+#include "gui_app/StateGraphicItem.h"
 
 /**
  * @brief Represents the entire interpreted finite automaton.

@@ -41,7 +41,7 @@ public:
      *         alebo renderovania šablóny.
      * @throws nlohmann::json::exception Ak zlyhá konverzia Machine -> JSON (propaguje výnimku).
      */
-    std::string generate(const Machine& machine);
+    std::string generate(const Machine& machine, const std::string& jsonDefinitionPath);
 
     // --- Voliteľné Metódy ---
     // Môžeš pridať metódy na nastavenie globálnych premenných pre šablónu,

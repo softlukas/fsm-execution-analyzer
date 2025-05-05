@@ -21,7 +21,7 @@ std::string MainWindowUtils::ProccessOneArgumentDialog(const std::string& textTo
     return input.trimmed().toStdString();
 }
 
-
+/*
 QGraphicsItemGroup* MainWindowUtils::drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene) {
    
 
@@ -139,4 +139,4 @@ QGraphicsItemGroup* MainWindowUtils::drawArrow(const QPointF &startPos, const QP
     qDebug() << "Arrow/Loop group added to scene for transition ID:" << transitionId;
     scene->addItem(arrowGroup); // Add the group to the scene
     return arrowGroup; // Return the created group
-}
+}*/

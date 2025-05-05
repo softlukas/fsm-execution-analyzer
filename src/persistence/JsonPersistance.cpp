@@ -3,7 +3,7 @@
  * @brief Implementation of the JsonPersistence class using nlohmann/json.
  */
 #include "JsonPersistance.h" // Zmenený názov headeru
-#include "Machine.h"
+#include "core/Machine.h"
 #include "nlohmann/json.hpp"
 #include <fstream>
 #include <iostream> // Pre std::cerr/cout

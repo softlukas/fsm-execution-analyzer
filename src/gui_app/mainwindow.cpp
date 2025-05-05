@@ -1,10 +1,9 @@
 // Needed includes:
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "Machine.h"
-#include "State.h"
-#include "Transition.h" // Needed for creating Transition
-#include "JsonCreator.h" // Needed for saving to JSON
+#include "core/Machine.h"
+#include "core/State.h"
+#include "core/Transition.h" // Needed for creating Transition
 #include "mainWindowUtils.h" // Needed for utility functions
 #include "GraphicsView.h" // Needed for casting ui->graphicsView
 #include <memory>
@@ -39,6 +38,14 @@
 #include <QVBoxLayout>  // << Potrebný pre usporiadanie pod seba
 #include <QGroupBox>    // << Potrebný pre prístup ku groupboxu (ak pristupuješ z kódu)
 #include "StateGraphicItem.h"
+#include <QCoreApplication> // Potrebný include
+#include <QDir>
+#include "persistence/JsonPersistance.h" // Alebo JsonCreator.h
+#include "codegen/CodeGenerator.h"
+#include <fstream>
+#include <QProcess>
+
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -81,8 +88,9 @@ MainWindow::MainWindow(QWidget *parent)
     std::string portGUI;
     std::string portAutomat;
 
+
     ProccessMultipleArgsInputEditDialog("ADD PORTS", "Add port GUI", "Add port AUTOMAT",
-        initialStateName, initialStateAction, &portGUI, &portAutomat);
+        initialStateName, initialStateAction, &this->portGUI, &this->portAutomat);
 
     
 }
@@ -96,6 +104,193 @@ MainWindow::~MainWindow() {
 void MainWindow::on_runAutomatButton_clicked() {
 
     qDebug() << "Run Automaton button clicked.";
+
+    
+    if (!machine) {
+        QMessageBox::critical(this, "Error", "No automaton model loaded or created.");
+        return;
+    }
+    std::string automatonNameStd = machine->getName();
+
+    /*
+    if (automatonNameStd.empty()) {
+        automatonNameStd = MainWindowUtils::ProccessOneArgumentDialog("Enter automaton name:");
+        if (automatonNameStd.empty()) {
+             QMessageBox::warning(this, "Cancelled", "Automaton name is required.");
+             return;
+        }
+        // Tu by si mal pravdepodobne aktualizovať aj názov v `machine` objekte, ak má metódu setName()
+        // machine->setName(automatonNameStd);
+        qDebug() << "Using entered automaton name:" << QString::fromStdString(automatonNameStd);
+    }*/
+
+    QString automatonName = QString::fromStdString(automatonNameStd);
+    QString safeDirName = automatonName;
+    safeDirName.replace(QRegExp("[^a-zA-Z0-9_.-]"), "_"); // Vytvor bezpečný názov pre adresár
+
+    QString appDirPath = QCoreApplication::applicationDirPath();
+    qDebug() << "Application directory path:" << appDirPath;
+    QDir buildSubDir(appDirPath);
+    buildSubDir.cdUp();
+    QString runtimeLibDir = buildSubDir.absolutePath() + "/runtime";
+    buildSubDir.cdUp();
+    buildSubDir.cdUp();
+    QString projectPath = buildSubDir.absolutePath();
+    QString targetBaseDir = projectPath + "/generated_automatons";
+    QString targetAutomatonDir = targetBaseDir + "/" + safeDirName;
+    qDebug() << "Target automaton directory:" << targetAutomatonDir;
+
+    // --- 3. Vytvorenie Cieľového Adresára ---
+    QDir dir(targetAutomatonDir);
+    if (!dir.exists()) {
+        qDebug() << "Creating directory for automaton:" << targetAutomatonDir;
+        if (!dir.mkpath(".")) {
+             QMessageBox::critical(this, "Error", "Could not create directory: " + targetAutomatonDir);
+             return;
+        }
+    } else {
+         qDebug() << "Directory already exists:" << targetAutomatonDir;
+    }
+
+    // --- 4. Uloženie JSON Definície do Cieľového Adresára ---
+    QString jsonPath = targetAutomatonDir + "/" + safeDirName + ".json";
+    qDebug() << "Saving current model to JSON:" << jsonPath;
+    if (!JsonPersistence::saveToFile(*machine, jsonPath.toStdString())) { // Použi správnu triedu na ukladanie
+         QMessageBox::critical(this, "Error", "Failed to save automaton model to JSON file.");
+         return;
+    }
+
+    // --- 5. Generovanie C++ Kódu do Cieľového Adresára ---
+    QString generatedCppPath = targetAutomatonDir + "/" + safeDirName + "_generated.cpp";
+    QString templatePath = projectPath + "/templates/automation_template.tpl"; // Cesta k šablóne
+
+    qDebug() << "Generating C++ code from template:" << templatePath << "to:" << generatedCppPath;
+    try {
+        CodeGenerator generator(templatePath.toStdString());
+        // Predpokladáme, že generate berie Machine objekt a interné to_json ho konvertuje
+        // Alebo ak CodeGenerator číta JSON, tak by čítal jsonPath
+        std::string cpp_code = generator.generate(*machine, jsonPath.toStdString());
+
+        std::ofstream cppFile(generatedCppPath.toStdString());
+        if (!cppFile) {
+             throw CodeGenerator::GenerationError("Failed to open output C++ file for writing: " + generatedCppPath.toStdString());
+        }
+        cppFile << cpp_code;
+        cppFile.close();
+         if (!cppFile) { // Skontroluj aj po zatvorení
+             throw CodeGenerator::GenerationError("Failed to write to output C++ file: " + generatedCppPath.toStdString());
+         }
+         qInfo() << "C++ code generated successfully.";
+
+         QMessageBox::information(this, "Success", "Automaton JSON and C++ code generated successfully in:\n" + targetAutomatonDir);
+
+    } catch (const std::exception& e) {
+        QMessageBox::critical(this, "Code Generation Error", QString("Failed to generate C++ code: %1").arg(e.what()));
+        // Voliteľne zmaž nekompletné súbory, ak nastala chyba
+        QFile::remove(generatedCppPath);
+        // QFile::remove(jsonPath); // JSON už bol úspešne uložený
+        return;
+    }
+
+
+
+
+
+
+
+    // --- 6. Kompilácia C++ Kódu pomocou g++ ---
+    QString executablePath = targetAutomatonDir + "/" + safeDirName + "_automaton"; // Výstupný súbor bez prípony pre Linux
+
+    qDebug() << "Compiling" << generatedCppPath << "to" << executablePath;
+
+    QString runtimeDir = projectPath + "/src/runtime";
+    QString asioInclude = projectPath + "/third_party/asio/include";
+
+    QString compiler = "g++"; // Predpokladáme, že g++ je v PATH
+    QStringList arguments;
+    arguments << "-std=c++17";
+    arguments << "-I" + runtimeDir;         // Cesta k ifa_runtime hlavičkám
+    arguments << "-I" + asioInclude;        // Cesta k Asio hlavičkám
+    arguments << generatedCppPath;          // Vstupný generovaný súbor
+    // Výstupný spustiteľný súbor
+    arguments << "-o" << executablePath;
+    arguments << "-L" + runtimeLibDir;
+    arguments << "-lifa_runtime";
+    // Linker flagy pre Linux
+    arguments << "-lpthread";
+    arguments << "-lstdc++fs"; // Potrebné pre std::filesystem
+
+    QProcess compilerProcess;
+    qDebug() << "Compiler command:" << compiler << arguments.join(" ");
+    compilerProcess.setWorkingDirectory(projectPath); // Nastav pracovný adresár na koreň projektu
+    compilerProcess.start(compiler, arguments);
+
+    // Čakanie na dokončenie kompilácie a kontrola chýb
+    if (!compilerProcess.waitForStarted(-1)) {
+         QMessageBox::critical(this, "Compilation Error", "Could not start the compiler process: " + compilerProcess.errorString());
+         return;
+    }
+    qDebug() << "Compiler process started, waiting for finish...";
+    if (!compilerProcess.waitForFinished(-1)) {
+         QMessageBox::critical(this, "Compilation Error", "Compiler process timed out or failed to finish: " + compilerProcess.errorString());
+         return;
+    }
+
+    qDebug() << "Compiler process finished with exit code:" << compilerProcess.exitCode();
+    if (compilerProcess.exitCode() != 0) {
+        QString errorOutput = compilerProcess.readAllStandardError();
+        QString stdOutput = compilerProcess.readAllStandardOutput();
+        qDebug() << "Compilation Error Output:\n" << errorOutput;
+        qDebug() << "Compilation Standard Output:\n" << stdOutput;
+        // Zobraz chybu v okne
+        QMessageBox msgBox;
+        msgBox.setIcon(QMessageBox::Critical);
+        msgBox.setWindowTitle("Compilation Failed");
+        msgBox.setText(QString("Compiler exited with code %1.").arg(compilerProcess.exitCode()));
+        msgBox.setDetailedText("Standard Output:\n" + stdOutput + "\n\nError Output:\n" + errorOutput);
+        msgBox.exec();
+        return; // Chyba kompilácie
+    }
+
+    qInfo() << "Compilation successful: " << executablePath;
+    QMessageBox::information(this, "Compilation Successful", "Automaton compiled successfully:\n" + executablePath);
+
+    // --- 7. Spustenie skompilovaného automatu (Nezávisle) ---
+    qDebug() << "portAutomat:" << QString::fromStdString(portAutomat);
+    qDebug() << "portGUI:" << QString::fromStdString(portGUI);
+
+    QStringList automatonArgs;
+    automatonArgs << QString::number(std::stoi(portAutomat));
+
+    automatonArgs << QString::number(std::stoi(portGUI));
+
+
+    qDebug() << "Starting automaton process detached:" << executablePath << automatonArgs.join(" ");
+
+    qint64 pid = 0; // Premenná na uloženie PID
+    qDebug() << "Arguments passed to automaton:" << automatonArgs;
+
+    // Použi QProcess::startDetached, ktorá vracia PID
+    if (QProcess::startDetached(executablePath, automatonArgs, targetAutomatonDir, &pid)) { // Štvrtý argument prijme PID
+        qInfo() << "Automaton process" << automatonName << "started successfully (detached) with PID:" << pid;
+        QMessageBox::information(this, "Started", "Automaton '" + automatonName + "' started (PID: " + QString::number(pid) + ").\nListen Port: " + QString::number(std::stoi(portAutomat)) + "\nGUI Port: " + QString::number(std::stoi(portGUI)));
+
+        // Ulož PID do členskej premennej (ak ju máš)
+        //currentAutomatonPid_ = pid; // Predpokladá, že máš premennú `qint64 currentAutomatonPid_ = 0;` v mainwindow.h
+
+        // TODO: Aktualizuj stav GUI (napr. zobraz PID, zmeň text tlačidla)
+        // ui->statusbar->showMessage("Automaton '" + automatonName + "' running (PID: " + QString::number(pid) + ")", 0);
+        // ui->runAutomatButton->setText("Running (Stop?)"); // Alebo samostatné Stop tlačidlo
+        // ui->pidLabel->setText(QString::number(pid)); // Ak máš label pre PID
+
+    } else {
+        qCritical() << "Failed to start detached automaton process.";
+        QMessageBox::critical(this, "Process Error", "Could not start the automaton process.");
+        // ui->statusbar->showMessage("Failed to start automaton!", 0);
+    }
+
+    qDebug() << "Starting automaton on PID:" << pid;
+
     
 }
 
@@ -637,8 +832,11 @@ void MainWindow::on_addStateButton_clicked() {
             qDebug() << "Group moved. New position:" << group->pos();
             qDebug() << "Moved state ID:" << group->data(0).toInt();
             
-            StateGraphicItem* stateGraphicItem = machine->getStateGraphicItem(group->data(0).toInt());
+            //StateGraphicItem* stateGraphicItem = machine->getStateGraphicItem(group->data(0).toInt());
             //stateGraphicItem->updateTransitions(scene);
+
+            State *state = machine->getState(group->data(0).toInt());
+            state->updateTransitionPositions(scene);
         }
     });
    
@@ -789,7 +987,17 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
                 return;
             }
            
-            QGraphicsItemGroup *transitionGroup = MainWindowUtils::drawArrow(startItemForTransition->sceneBoundingRect().center(), endItemForTransition->sceneBoundingRect().center(), QString::fromStdString(condition.toStdString()), objectTransitionId, scene);
+
+            QVariant actualStartPos;
+            QVariant actualEndPos;
+
+            QGraphicsItemGroup *transitionGroup = MainWindow::drawArrow(startItemForTransition->sceneBoundingRect().center(), endItemForTransition->sceneBoundingRect().center(), QString::fromStdString(condition.toStdString()), objectTransitionId, scene, &actualStartPos, &actualEndPos);
+            
+            this->startStateForTransition->addIncomingTransitionGroup(transitionGroup, actualStartPos, actualEndPos);
+            this->endStateForTransition->addOutgoingTransitionGroup(transitionGroup, actualStartPos, actualEndPos);
+            
+            
+            
             //scene->addItem(transitionGroup);
             
             StateGraphicItem *startStateGraphicItem = machine->getStateGraphicItem(item->data(0).toInt());
@@ -1033,12 +1241,20 @@ void MainWindow::ProccessMultipleArgsInputEditDialog(const std::string& title, c
         if (dialog.exec() == QDialog::Accepted) {
             *newInput1 = lineEdit1.text().trimmed().toStdString();
             *newInput2 = lineEdit2.text().trimmed().toStdString();
+            qDebug() << "Dialog accepted. Values entered:";
+            qDebug() << "newInput1 =" << QString::fromStdString(*newInput1);
+            qDebug() << "newInput2 =" << QString::fromStdString(*newInput2);
         } else {
             *newInput1 = QString().toStdString();
             *newInput2 = QString().toStdString();
+            qDebug() << "Dialog cancelled or closed. Both inputs set to empty strings.";
+
         }
 
-
+    // --- Súhrnný výpis na konci ---
+    qDebug() << "ProccessMultipleArgsInputEditDialog completed. Final values:";
+    qDebug() << "newInput1 =" << QString::fromStdString(*newInput1);
+    qDebug() << "newInput2 =" << QString::fromStdString(*newInput2);
 
 
 }
@@ -1084,9 +1300,7 @@ void MainWindow::unhighlightItem(QGraphicsItemGroup* item) {
 }
 
 
-QGraphicsItemGroup* MainWindow::drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene) {
-   
-
+QGraphicsItemGroup* MainWindow::drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene, QVariant *actualStartPos, QVariant *actualEndPos) {
     // --- Common Arrow Properties ---
     QPen arrowPen(Qt::red, 2); // Pen for the arrow line and head
     qreal arrowSize = 10;      // Size of the arrowhead
@@ -1097,24 +1311,16 @@ QGraphicsItemGroup* MainWindow::drawArrow(const QPointF &startPos, const QPointF
     // --- Store Transition ID in the group ---
     arrowGroup->setData(0, "Transition"); // Item type identifier
     arrowGroup->setData(1, QVariant(transitionId)); // Store the actual transition ID
-    // Optional: Store start/end state names if needed for selection, passed as extra args
-    // arrowGroup->setData(2, QVariant(startStateName));
-    // arrowGroup->setData(3, QVariant(targetStateName));
-
 
     // Check if start and end points are the same (or very close) for self-loop
-    // Use a small tolerance for floating point comparison
     if (QLineF(startPos, endPos).length() < 1.0) {
         // --- Draw Self-Loop (Arc) ---
         qDebug() << "Drawing self-loop at" << startPos << "ID:" << transitionId;
 
-        // Define loop parameters relative to the point
         qreal radiusX = 30; // Fixed size loop radius
         qreal radiusY = 30;
-        // Position the loop slightly above the point
-        QPointF loopTopCenter(startPos.x(), startPos.y() - radiusY * 1.2); // Adjust vertical offset
+        QPointF loopTopCenter(startPos.x(), startPos.y() - radiusY * 1.2);
 
-        // Create the path for the arc
         QPainterPath loopPath;
         qreal startAngle = 210; qreal spanAngle = -240;
         QRectF arcRect(loopTopCenter.x() - radiusX, loopTopCenter.y() - radiusY, 2 * radiusX, 2 * radiusY);
@@ -1124,7 +1330,6 @@ QGraphicsItemGroup* MainWindow::drawArrow(const QPointF &startPos, const QPointF
         loopItem->setPen(arrowPen);
         arrowGroup->addToGroup(loopItem);
 
-        // Arrowhead for loop
         QPointF loopEnd = loopPath.currentPosition();
         qreal angle = loopPath.angleAtPercent(1.0);
         QPointF arrowLP1 = loopEnd + QPointF(qSin(qDegreesToRadians(-angle) + M_PI / 3) * arrowSize, qCos(qDegreesToRadians(-angle) + M_PI / 3) * arrowSize);
@@ -1134,46 +1339,41 @@ QGraphicsItemGroup* MainWindow::drawArrow(const QPointF &startPos, const QPointF
         arrowLHeadItem->setPen(arrowPen); arrowLHeadItem->setBrush(Qt::red);
         arrowGroup->addToGroup(arrowLHeadItem);
 
-        // Label for loop
         QGraphicsTextItem* textL = new QGraphicsTextItem(label);
         QRectF textLRect = textL->boundingRect();
         textL->setPos(loopTopCenter.x() - textLRect.width() / 2, loopTopCenter.y() - radiusY - textLRect.height() - 2);
         arrowGroup->addToGroup(textL);
 
+        *actualStartPos = QVariant(startPos);
+        *actualEndPos = QVariant(loopEnd);
+
     } else {
         // --- Draw Curved Arrow ---
         qDebug() << "Drawing curved arrow from" << startPos << "to" << endPos << "ID:" << transitionId;
 
-        // Line connecting the provided start and end points
         QLineF line(startPos, endPos);
 
-        // Create the path object
         QPainterPath curvePath;
-        curvePath.moveTo(startPos); // Start at the start point
+        curvePath.moveTo(startPos);
 
-        // Calculate control point for the quadratic Bezier curve
         QPointF midPoint = line.pointAt(0.5);
         QPointF delta = endPos - startPos;
-        QPointF perp(delta.y(), -delta.x()); // Perpendicular vector
+        QPointF perp(delta.y(), -delta.x());
         qreal perpLength = QLineF(QPointF(0,0), perp).length();
         QPointF normPerp = (perpLength > 0) ? (perp / perpLength) : QPointF(0, -1);
-        qreal curveFactor = (endPos.x() > startPos.x()) ? -1.0 : 1.0; // Determine curve direction
-        qreal curveMagnitude = qMin(line.length() * 0.2, 40.0); // Bend amount
+        qreal curveFactor = (endPos.x() > startPos.x()) ? -1.0 : 1.0;
+        qreal curveMagnitude = qMin(line.length() * 0.2, 40.0);
         QPointF controlPoint = midPoint + normPerp * curveMagnitude * curveFactor;
 
-        // Add the quadratic curve to the path
         curvePath.quadTo(controlPoint, endPos);
 
-        // Create a QGraphicsPathItem for the curve
         QGraphicsPathItem* curveItem = new QGraphicsPathItem(curvePath);
         curveItem->setPen(arrowPen);
-        arrowGroup->addToGroup(curveItem); // Add curve to the group
+        arrowGroup->addToGroup(curveItem);
 
-        // --- Calculate Arrowhead for the curve ---
-        // Use angle of the line segment from control point to end point
         QLineF endSegment(controlPoint, endPos);
-        qreal angleDeg = endSegment.angle(); // Angle in degrees
-        double angleRad = qDegreesToRadians(-angleDeg); // Convert for trig functions
+        qreal angleDeg = endSegment.angle();
+        double angleRad = qDegreesToRadians(-angleDeg);
 
         QPointF arrowP1 = endPos + QPointF(cos(angleRad - M_PI / 6.0) * arrowSize,
                                            sin(angleRad - M_PI / 6.0) * arrowSize);
@@ -1181,26 +1381,25 @@ QGraphicsItemGroup* MainWindow::drawArrow(const QPointF &startPos, const QPointF
                                            sin(angleRad + M_PI / 6.0) * arrowSize);
 
         QPolygonF arrowHead;
-        arrowHead << endPos << arrowP1 << arrowP2; // Points for the triangle
+        arrowHead << endPos << arrowP1 << arrowP2;
         QGraphicsPolygonItem *arrowHeadItem = new QGraphicsPolygonItem(arrowHead);
         arrowHeadItem->setPen(arrowPen);
-        arrowHeadItem->setBrush(Qt::red); // Fill the arrowhead
-        arrowGroup->addToGroup(arrowHeadItem); // Add arrowhead to the group
+        arrowHeadItem->setBrush(Qt::red);
+        arrowGroup->addToGroup(arrowHeadItem);
 
-        // --- Position Label for the curve ---
         QGraphicsTextItem* text = new QGraphicsTextItem(label);
-        QPointF labelPos = curvePath.pointAtPercent(0.5); // Midpoint of the curve path
-        text->setPos(labelPos + normPerp * (curveFactor > 0 ? 10 : -15)); // Offset label
-        arrowGroup->addToGroup(text); // Add label to the group
+        QPointF labelPos = curvePath.pointAtPercent(0.5);
+        text->setPos(labelPos + normPerp * (curveFactor > 0 ? 10 : -15));
+        arrowGroup->addToGroup(text);
+
+        *actualStartPos = QVariant(startPos);
+        *actualEndPos = QVariant(endPos);
     }
 
-    // --- Finalize Group ---
-    arrowGroup->setFlag(QGraphicsItem::ItemIsSelectable); // Make the whole group selectable
-     // Add the complete group to the scene
-
+    arrowGroup->setFlag(QGraphicsItem::ItemIsSelectable);
+    scene->addItem(arrowGroup);
     qDebug() << "Arrow/Loop group added to scene for transition ID:" << transitionId;
-    scene->addItem(arrowGroup); // Add the group to the scene
-    return arrowGroup; // Return the created group
+    return arrowGroup;
 }
 
 
