@@ -222,12 +222,8 @@ const Output* Machine::getOutput(const std::string& name) const {
     return nullptr;
 }
 
-void Machine::addStateGraphicItem(std::unique_ptr<StateGraphicItem> stateGraphicItem) {
-    stateGrapicItems[stateGraphicItemId] = std::move(stateGraphicItem);
-    stateGraphicItemId++;
-}
 
-/**
+/**StateGraphicItem
  * @brief Gets a constant reference to the map of all states.
  */
 const std::map<std::string, std::unique_ptr<State>>& Machine::getStates() const {
@@ -279,13 +275,6 @@ bool Machine::setVariableValue(const std::string& name, const std::string& value
     return false; // Variable not found
 }
 
-StateGraphicItem* Machine::getStateGraphicItem(const int stateGraphicItemId) const {
-    auto it = stateGrapicItems.find(stateGraphicItemId);
-    if (it != stateGrapicItems.end()) {
-        return it->second.get();
-    }
-    return nullptr; // State graphic item not found
-}
 
 /**
  * @brief Updates the last known value of an input channel.

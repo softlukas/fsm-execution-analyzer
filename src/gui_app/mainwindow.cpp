@@ -37,7 +37,6 @@
 #include <QLabel>       // << Potrebný pre zobrazenie textu
 #include <QVBoxLayout>  // << Potrebný pre usporiadanie pod seba
 #include <QGroupBox>    // << Potrebný pre prístup ku groupboxu (ak pristupuješ z kódu)
-#include "StateGraphicItem.h"
 #include <QCoreApplication> // Potrebný include
 #include <QDir>
 #include "persistence/JsonPersistance.h" // Alebo JsonCreator.h
@@ -812,12 +811,8 @@ void MainWindow::on_addStateButton_clicked() {
     group->setData(0, QVariant(objectStateId)); // Store the state ID in the group
     group->setData(1, "state"); // Store the state name in the group
 
-    StateGraphicItem* stateGraphicItem = new StateGraphicItem(objectStateId, group->sceneBoundingRect().center());
 
     
-
-
-    machine->addStateGraphicItem(std::make_unique<StateGraphicItem>(*stateGraphicItem));
 
 
 
@@ -999,14 +994,7 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
             
             
             //scene->addItem(transitionGroup);
-            
-            StateGraphicItem *startStateGraphicItem = machine->getStateGraphicItem(item->data(0).toInt());
 
-            if (startStateGraphicItem) {
-                startStateGraphicItem->addTransitionGroup(transitionGroup);
-            } else {
-                qDebug() << "Start state graphic item not found.";
-            }
 
             try {
                 if(this->startStateForTransition && this->endStateForTransition) {

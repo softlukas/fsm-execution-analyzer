@@ -22,7 +22,6 @@ SOURCES += \
     mainwindow.cpp \
     GraphicsView.cpp \
     mainWindowUtils.cpp \
-    StateGraphicItem.cpp \
     ../core/Machine.cpp \
     ../core/State.cpp \
     ../core/Transition.cpp \
@@ -39,7 +38,6 @@ HEADERS += \
     mainwindow.h \
     GraphicsView.h \
     mainWindowUtils.h \
-    StateGraphicItem.h \
     ../core/Machine.h \
     ../core/State.h \
     ../core/Transition.h \

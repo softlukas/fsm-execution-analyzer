@@ -14,7 +14,6 @@
 #include "Variable.h"
 #include "Input.h"
 #include "Output.h"
-#include "gui_app/StateGraphicItem.h"
 
 /**
  * @brief Represents the entire interpreted finite automaton.
@@ -32,13 +31,10 @@ public:
     void addTransition(std::unique_ptr<Transition> transition);
     void addVariable(std::unique_ptr<Variable> variable);
 
-    void addStateGraphicItem(std::unique_ptr<StateGraphicItem> stateGraphicItem);
     void addInput(std::unique_ptr<Input> input);
     void addOutput(std::unique_ptr<Output> output);
     void setInitialState(const std::string& stateName);
 
-    // --- Getters for definition ---
-    StateGraphicItem* getStateGraphicItem(const int stateGraphicItemId) const;
     const std::string& getName() const;
     const State* getInitialState() const;
     State* getState(const int stateId) const;
@@ -184,7 +180,6 @@ private:
     // --- Definition Data --- (Moved from public for better encapsulation)
     std::string machineName;
     std::map<std::string, std::unique_ptr<State>> states;
-    std::map<int, std::unique_ptr<StateGraphicItem>> stateGrapicItems;
     int stateGraphicItemId = 0;
     std::map<std::string, std::unique_ptr<Variable>> variables;
     std::map<std::string, std::unique_ptr<Input>> inputs;

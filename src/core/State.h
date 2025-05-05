@@ -3,7 +3,11 @@
 
 #include <string> // We'll need this for state name and action
 #include <vector> // Maybe later for a list of transitions originating from this state? (TBD based on design)
-#include <QGraphicsItemGroup> // Required for QGraphicsItemGroup
+#include <QGraphicsScene>
+#include <QGraphicsItemGroup>
+#include <QVariant>
+#include <map>
+#include <tuple>
 
 /**
  * @brief Represents a single state of the interpreted finite automaton.
@@ -46,7 +50,7 @@ public:
      */
     const std::string& getAction() const;
 
-    void updateTransitionsPositions(QGraphicsScene* scene);
+    void updateTransitionPositions(QGraphicsScene* scene);
 
 
     void addIncomingTransitionGroup(QGraphicsItemGroup* transitionGroup, const QVariant& data1, const QVariant& data2) {
