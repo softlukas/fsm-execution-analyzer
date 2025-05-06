@@ -5,6 +5,10 @@
 #include <QtMath>
 #include <QGraphicsScene>
 
+// Define a constant for the state radius
+const qreal STATE_RADIUS = 30.0; // Adjust the value as needed
+const qreal ARROW_SIZE = 10.0; // Adjust the value as needed
+
 #include "mainWindowUtils.h"
 
 std::string MainWindowUtils::ProccessOneArgumentDialog(const std::string& textToDisplay) {
@@ -81,158 +85,132 @@ QGraphicsItemGroup* MainWindowUtils::drawArrow(const QPointF &startPos, const QP
 
     } else {
 
-        // Shorten the line connecting startPos and endPos by 50 points on both sides
-        QLineF shortenedLine(startPos, endPos);
-        if (shortenedLine.length() > 100) { // Ensure the line is long enough to shorten
-            QPointF offset = shortenedLine.unitVector().p2() - shortenedLine.unitVector().p1();
-            shortenedLine.setP1(shortenedLine.p1() + offset * 50);
-            shortenedLine.setP2(shortenedLine.p2() - offset * 50);
-        }
+// This is the 'else' block within your MainWindowUtils::drawArrow function.
+// It assumes 'startPos' and 'endPos' are the center points of the start and end states,
+// and 'arrowPen', 'ARROW_SIZE', 'STATE_RADIUS' are defined earlier in the function or globally.
+// QGraphicsItemGroup *arrowGroup, QGraphicsScene *scene,
+// QString label, int transitionId,
+// QPointF *actualStartPos, QPointF *actualEndPos are also parameters to drawArrow.
 
-       
+// --- Kreslenie prechodu medzi dvoma rôznymi stavmi (A -> B) ---
+// startPos a endPos sú tu CENTRÁ stavov
 
-       
+// Predpokladáme, že STATE_RADIUS je definovaný (napr. const qreal STATE_RADIUS = 30.0;)
+// Predpokladáme, že ARROW_SIZE je definovaný (napr. const qreal ARROW_SIZE = 10.0;)
 
-        QPointF adjustedStartPos = shortenedLine.p1();
-        QPointF adjustedEndPos = shortenedLine.p2();
+qreal angularOffsetForAttachment = 0.35; // Uhlový posun (cca 20 stupňov) - môžeš experimentovať
+const qreal gap = 2.5; // <<< NOVÁ KONŠTANTA PRE MEDZERU MEDZI ŠÍPKOU A STAVOM
 
-        // --- Draw Curved Arrow ---
-        QLineF line(adjustedStartPos, adjustedEndPos);
+// Smerový faktor pre posunutie - určený kanonicky pre pár stavov
+// Aby A->B a B->A mali konzistentný, ale opačný vizuálny posun
+qreal pairOffsetDirectionFactor;
+if (startPos.x() < endPos.x()) { // Používame pôvodné stredy (startPos, endPos)
+    pairOffsetDirectionFactor = 1.0; // Napr. A->B (A je vľavo od B) dostane +1
+} else if (startPos.x() > endPos.x()) {
+    pairOffsetDirectionFactor = -1.0; // Napr. B->A (B je vpravo od A, teda startPos.x > endPos.x) dostane -1
+} else { // X súradnice sú rovnaké, rozhodne Y
+    if (startPos.y() < endPos.y()) { // A je vyššie ako B (šípka ide dole)
+        pairOffsetDirectionFactor = 1.0;
+    } else if (startPos.y() > endPos.y()){ // A je nižšie ako B (šípka ide hore)
+        pairOffsetDirectionFactor = -1.0;
+    } else {
+         // Stavy sú na sebe - tento prípad je už ošetrený v hlavnej if podmienke
+         pairOffsetDirectionFactor = 1.0; // Default
+    }
+}
 
-        QPainterPath curvePath;
-        curvePath.moveTo(adjustedStartPos);
+// Uhol priamky medzi stredmi stavov
+qreal lineAngleRad = qAtan2(-(endPos.y() - startPos.y()), // Y je invertované v Qt
+                           endPos.x() - startPos.x());
 
-        QPointF midPoint = line.pointAt(0.5);
-        QPointF delta = adjustedEndPos - adjustedStartPos;
-        QPointF perp(delta.y(), -delta.x());
-        qreal perpLength = QLineF(QPointF(0,0), perp).length();
-        QPointF normPerp = (perpLength > 0) ? (perp / perpLength) : QPointF(0, -1);
-        //qreal curveFactor = (adjustedEndPos.x() > adjustedStartPos.x()) ? -1.0 : 1.0;
+// Výpočet adjustedStartPos, teraz s medzerou od kružnice
+// Bod, kde sa začína čiara šípky, bude (STATE_RADIUS + gap) od stredu začiatočného stavu.
+qreal startAttachAngle = lineAngleRad - pairOffsetDirectionFactor * angularOffsetForAttachment;
+QPointF adjustedStartPos(startPos.x() + (STATE_RADIUS + gap) * qCos(startAttachAngle),
+                         startPos.y() - (STATE_RADIUS + gap) * qSin(startAttachAngle)); // -sin kvôli Y osi
 
-        qDebug() << "------------------------------";
-        qDebug() << "Adjusted Start Position:" << adjustedStartPos.x();
-        qDebug() << "Adjusted End Position:" << adjustedEndPos.x();
-        qDebug() << "------------------------------";
-
-        /*
-        // Nová logika pre curveFactor podľa tvojich požiadaviek:
-        qreal curveFactor;
-        if (adjustedStartPos.x() < adjustedEndPos.x()) {
-            // Šípka smeruje prevažne doprava
-            curveFactor = 1.0; // Jeden smer zakrivenia
-        } else if (adjustedStartPos.x() > adjustedEndPos.x()) {
-            // Šípka smeruje prevažne doľava
-            curveFactor = -1.0; // Opačný smer zakrivenia
-        } else {
-            // X-ové súradnice sú rovnaké (vertikálna šípka)
-            if (adjustedStartPos.y() < adjustedEndPos.y()) {
-                // Šípka smeruje nadol
-                curveFactor = 1.0; // Jeden smer zakrivenia pre vertikálne
-            } else {
-                // Šípka smeruje nahor (alebo adjustedStartPos.y() == adjustedEndPos.y(), čo by znamenalo rovnaké body,
-                // ale to je už ošetrené v hlavnej if podmienke funkcie)
-                curveFactor = -1.0; // Opačný smer zakrivenia pre vertikálne
-            }
-        }
-        */
+// Výpočet adjustedEndPos, teraz s medzerou od kružnice
+// Bod, kam smeruje hrot šípky, bude (STATE_RADIUS + gap) od stredu koncového stavu.
+qreal endToStartAngleRad = lineAngleRad + M_PI;
+qreal endAttachAngle = endToStartAngleRad - pairOffsetDirectionFactor * angularOffsetForAttachment;
+QPointF adjustedEndPos(endPos.x() + (STATE_RADIUS + gap) * qCos(endAttachAngle),
+                       endPos.y() - (STATE_RADIUS + gap) * qSin(endAttachAngle)); // -sin kvôli Y osi
 
 
-        // Použijeme pôvodné stredy stavov (sceneStartCenter, sceneEndCenter)
-        // na určenie kanonického smeru pre výpočet curveFactor.
-        // Tým zabezpečíme, že curveFactor bude rovnaký pre A->B aj B->A.
-        // Keďže normPerp mení znamienko, výsledné vyklenutie bude opačné.
+// --- Kreslenie zakrivenej šípky medzi novými adjustedStartPos a adjustedEndPos ---
+QLineF line(adjustedStartPos, adjustedEndPos);
 
-        QPointF p_ref_start = startPos; // Pôvodný stred začiatočného stavu
-        QPointF p_ref_end = endPos;     // Pôvodný stred koncového stavu
+QPainterPath curvePath;
+curvePath.moveTo(adjustedStartPos);
 
-        // Určíme kanonický "začiatok" a "koniec" pre pár bodov, aby bol curveFactor konzistentný.
-        // Napríklad, bod s menšou x-ovou súradnicou je "prvý". Ak sú x rovnaké, rozhodne y.
-        QPointF canonicalOrderedStart = p_ref_start;
-        QPointF canonicalOrderedEnd = p_ref_end;
+QPointF midPoint = line.pointAt(0.5);
+QPointF delta = adjustedEndPos - adjustedStartPos;
+QPointF perp(delta.y(), -delta.x());
+qreal perpLength = QLineF(QPointF(0,0), perp).length();
+QPointF normPerp = (perpLength > 0) ? (perp / perpLength) : QPointF(0, -1);
 
-        if (p_ref_start.x() > p_ref_end.x()) {
-            canonicalOrderedStart = p_ref_end;
-            canonicalOrderedEnd = p_ref_start;
-        } else if (p_ref_start.x() == p_ref_end.x()) {
-            if (p_ref_start.y() > p_ref_end.y()) {
-                canonicalOrderedStart = p_ref_end;
-                canonicalOrderedEnd = p_ref_start;
-            }
-        }
-        // Teraz máme canonicalOrderedStart a canonicalOrderedEnd, kde canonicalOrderedStart je "menší".
+qreal curveMagnitude = qMin(line.length() * 0.20, 30.0);
 
-        qreal curveFactor;
-        // Aplikujeme tvoju logiku na tieto kanonicky usporiadané body:
-        // "pokial xova suradnica statru < x ciela, chod jednym smerom, inak opacne."
-        // V našom prípade canonicalOrderedStart.x() bude vždy <= canonicalOrderedEnd.x()
-        // (okrem prípadu, keď sú body identické, čo je ošetrené vyššie).
-        // Takže sa zameriame na hlavný smer.
-        
-        // Ak chceme, aby sa to vždy vyklenulo napr. "jedným smerom" pre kanonický smer A->B
-        // a `normPerp` sa postará o otočenie pre B->A, môžeme `curveFactor` nastaviť na konštantu.
-        // Napríklad vždy 1.0.
-        // curveFactor = 1.0;
-
-        int deltaX = adjustedStartPos.x() - adjustedStartPos.x();
-        int deltaY = adjustedEndPos.y() - adjustedEndPos.y();
+qreal bezierCurveFactor = 1.0; 
 
 
-        // Ak chceš použiť tvoju logiku na kanonických bodoch:
-        if (canonicalOrderedStart.x() < canonicalOrderedEnd.x()) {
-           
-            curveFactor = 1.0; // "Jeden smer" pre hlavný smer x
-        } else if (canonicalOrderedStart.x() > canonicalOrderedEnd.x()) {
-            
-             // Toto by sa nemalo stať po kanonickom usporiadaní, ale pre úplnosť
-            curveFactor = -1.0;
-            //QPen arrowPen(Qt::green, 2); // Zmenené na modrú
-        } else { // X-ové súradnice sú rovnaké
-            if (canonicalOrderedStart.y() < canonicalOrderedEnd.y()) {
-                
-                curveFactor = 1.0; // "Jeden smer" pre hlavný smer y
-            } else if (canonicalOrderedStart.y() > canonicalOrderedEnd.y()) {
-               
-                curveFactor = -1.0;
-                //QPen arrowPen(Qt::green, 2);
-            } else {
-                // Body sú identické, ale to je ošetrené v hlavnej if podmienke.
-                // Pre istotu nastavíme default.
-                curveFactor = 1.0;
-            }
-        }
-        // Dôležité: Tento curveFactor je teraz rovnaký pre A->B aj B->A,
-        // pretože je odvodený od kanonicky usporiadaných pôvodných stredov.
+QPointF controlPoint = midPoint + normPerp * curveMagnitude * bezierCurveFactor;
+
+curvePath.quadTo(controlPoint, adjustedEndPos);
+
+QGraphicsPathItem* curveItem = new QGraphicsPathItem(curvePath);
+curveItem->setPen(arrowPen);
+arrowGroup->addToGroup(curveItem);
+
+// --- Hrot šípky ---
+// Smer posledného segmentu krivky (od kontrolného bodu k koncovému bodu)
+QLineF endSegmentDirection(controlPoint, adjustedEndPos);
+if (endSegmentDirection.length() < 0.01) { 
+    endSegmentDirection = QLineF(adjustedStartPos, adjustedEndPos); 
+    if (endSegmentDirection.length() < 0.01 && line.length() > 0.01) { 
+        endSegmentDirection = line;
+    } else if (endSegmentDirection.length() < 0.01) { 
+         endSegmentDirection = QLineF(adjustedEndPos, adjustedEndPos + QPointF(1,0));
+    }
+}
+
+double angleRadArrow = qAtan2(-(endSegmentDirection.dy()), endSegmentDirection.dx());
+
+QPointF arrowP1 = adjustedEndPos - QPointF(cos(angleRadArrow - M_PI / 6.0) * ARROW_SIZE,
+                                         -sin(angleRadArrow - M_PI / 6.0) * ARROW_SIZE); 
+QPointF arrowP2 = adjustedEndPos - QPointF(cos(angleRadArrow + M_PI / 6.0) * ARROW_SIZE,
+                                         -sin(angleRadArrow + M_PI / 6.0) * ARROW_SIZE); 
 
 
-        qreal curveMagnitude = qMin(line.length() * 0.2, 40.0);
-        QPointF controlPoint = midPoint + normPerp * curveMagnitude * curveFactor;
+QPolygonF arrowHeadPolygon;
+arrowHeadPolygon << adjustedEndPos << arrowP1 << arrowP2;
+QGraphicsPolygonItem *arrowHeadItem = new QGraphicsPolygonItem(arrowHeadPolygon);
+arrowHeadItem->setPen(arrowPen);
+arrowHeadItem->setBrush(Qt::red);
+arrowGroup->addToGroup(arrowHeadItem);
 
-        curvePath.quadTo(controlPoint, adjustedEndPos);
+// --- Text podmienky ---
+QGraphicsTextItem* textItem = new QGraphicsTextItem(label);
+QPointF textOffsetDirection = normPerp * bezierCurveFactor; 
+qreal textDistance = 12; 
 
-        QGraphicsPathItem* curveItem = new QGraphicsPathItem(curvePath);
-        curveItem->setPen(arrowPen);
-        arrowGroup->addToGroup(curveItem);
+QPointF labelPositionOffset; 
+qreal textOffsetDirectionLength = QLineF(QPointF(0,0), textOffsetDirection).length();
+QPointF normalizedTextOffsetDirection = (textOffsetDirectionLength > 0) ? (textOffsetDirection / textOffsetDirectionLength) : QPointF(0,0);
 
-        QLineF endSegment(controlPoint, adjustedEndPos);
-        qreal angleDeg = endSegment.angle();
-        double angleRad = qDegreesToRadians(-angleDeg);
+if (textOffsetDirection.y() < 0) { 
+    labelPositionOffset = normalizedTextOffsetDirection * textDistance;
+} else { 
+    labelPositionOffset = normalizedTextOffsetDirection * (textDistance + textItem->boundingRect().height());
+}
+if (qAbs(delta.x()) > qAbs(delta.y()) * 2 ) { 
+     labelPositionOffset.setY(labelPositionOffset.y() - textItem->boundingRect().height() / 2.0);
+}
 
-        QPointF arrowP1 = adjustedEndPos + QPointF(cos(angleRad + M_PI / 6.0) * arrowSize,
-                                           sin(angleRad + M_PI / 6.0) * arrowSize);
-        QPointF arrowP2 = adjustedEndPos + QPointF(cos(angleRad - M_PI / 6.0) * arrowSize,
-                                           sin(angleRad - M_PI / 6.0) * arrowSize);
 
-        QPolygonF arrowHead;
-        arrowHead << adjustedEndPos << arrowP1 << arrowP2;
-        QGraphicsPolygonItem *arrowHeadItem = new QGraphicsPolygonItem(arrowHead);
-        arrowHeadItem->setPen(arrowPen);
-        arrowHeadItem->setBrush(Qt::red);
-        arrowGroup->addToGroup(arrowHeadItem);
+textItem->setPos(controlPoint + labelPositionOffset - QPointF(textItem->boundingRect().width()/2,0) );
+arrowGroup->addToGroup(textItem);
 
-        QGraphicsTextItem* text = new QGraphicsTextItem(label);
-        QPointF labelPos = curvePath.pointAtPercent(0.5);
-        text->setPos(labelPos + normPerp * (curveFactor > 0 ? 10 : -15));
-        arrowGroup->addToGroup(text);
 
         *actualStartPos = startPos;
         *actualEndPos = endPos;
