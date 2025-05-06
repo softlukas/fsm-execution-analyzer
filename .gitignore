@@ -1,4 +1,4 @@
 *.pro.user
 .vscode/
 build/
-generated_automatons/a/
+generated_automatons/
