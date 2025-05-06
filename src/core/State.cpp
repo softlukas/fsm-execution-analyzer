@@ -93,6 +93,7 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
         if (newTransition) {
             outgoingTransitions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
             targetState->setIncomingTransitionGroup(id, newTransition, actualStartPos, actualEndPos);
+            qDebug() << "Outgoing transition state updated";
             //incomingTranstions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
         } else {
             
@@ -128,6 +129,8 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
             incomingTranstions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
             //outgoingTransitions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
             sourceState->setOutgoingTransitionGroup(id, newTransition, actualStartPos, actualEndPos);
+
+            qDebug() << "Incoming transition state udpdated";
             
         } else {
             

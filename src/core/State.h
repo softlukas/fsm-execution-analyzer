@@ -5,6 +5,7 @@
 #include <vector> // Maybe later for a list of transitions originating from this state? (TBD based on design)
 #include <QGraphicsScene>
 #include <QGraphicsItemGroup>
+#include <QDebug>
 #include <QVariant>
 #include <map>
 #include <tuple>
@@ -57,11 +58,19 @@ public:
 
 
     void addIncomingTransitionGroup(QGraphicsItemGroup* transitionGroup, const QPointF& data1, const QPointF& data2) {
-        incomingTranstions.insert({transitionGroup->data(0).toInt(), std::make_tuple(transitionGroup, data1, data2)});
+        if (incomingTranstions.find(transitionGroup->data(1).toInt()) != incomingTranstions.end()) {
+            qDebug() << "Incoming transition with ID" << transitionGroup->data(0).toInt() << "already exists. No new record created.";
+            return;
+        }
+        incomingTranstions.insert({transitionGroup->data(1).toInt(), std::make_tuple(transitionGroup, data1, data2)});
     }
 
     void addOutgoingTransitionGroup(QGraphicsItemGroup* transitionGroup, const QPointF& data1, const QPointF& data2) {
-        outgoingTransitions.insert({transitionGroup->data(0).toInt(), std::make_tuple(transitionGroup, data1, data2)});
+        if (outgoingTransitions.find(transitionGroup->data(1).toInt()) != outgoingTransitions.end()) {
+            qDebug() << "Outgoing transition with ID" << transitionGroup->data(0).toInt() << "already exists. No new record created.";
+            return;
+        }
+        outgoingTransitions.insert({transitionGroup->data(1).toInt(), std::make_tuple(transitionGroup, data1, data2)});
     }
 
     void setIncomingTransitionGroup(int transitionId, QGraphicsItemGroup* transitionGroup, const QPointF& data1, const QPointF& data2) {
