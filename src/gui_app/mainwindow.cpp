@@ -909,56 +909,87 @@ void MainWindow::on_loadJsonButton_clicked() {
 
     qInfo() << "Successfully loaded machine '" << QString::fromStdString(loadedMachine->getName()) << "' from JSON.";
 
-    // 6. Nahraď aktuálny model novým (ak nejaký existoval) a aktualizuj GUI
-    //    Najprv vyčisti starý stav GUI
-    qDebug() << "Clearing old model and GUI elements...";
-    scene->clear(); // Vyčisti grafickú scénu
-    // TODO: Vyčisti zoznamy premenných, vstupov, výstupov (podobne ako v populateUIFromModel)
-    //       Môžeš vytvoriť pomocnú funkciu clearUILists()
-    
-    //clearVariableList(); // Predpokladané pomocné funkcie
-    //clearInputList();
-    //clearOutputList();
+    // --- START OF GUI AND MODEL RESET ---
+    qDebug() << "Preparing to switch models. Clearing old GUI elements and model...";
 
+    // 1. Disconnect old scene 'changed' listeners and clear Graphics Scene
+    for (const auto& conn : stateMoveConnections) {
+        QObject::disconnect(conn);
+    }
+    stateMoveConnections.clear();
+    qDebug() << "Disconnected old state movement scene listeners.";
 
-    // Vymaž starý objekt Machine, ak existoval
+    scene->clear();
+    qDebug() << "Graphics scene cleared.";
+
+    // 2. Clear UI Lists (Variables, Inputs, Outputs) by resetting their QGroupBox layouts
+    clearVariableList();
+    clearInputList();
+    clearOutputList();
+    qDebug() << "UI lists (variables, inputs, outputs) cleared by resetting group box layouts.";
+
+    // 3. Delete the old Machine object, if it exists
     if (machine) {
         delete machine;
         machine = nullptr;
+        qDebug() << "Old machine model deleted.";
     }
 
-    // Prevezmi vlastníctvo nového objektu
+    // 4. Take ownership of the new Machine object
     machine = loadedMachine.release();
-    qDebug() << "Took ownership of the newly loaded machine object.";
-    
+    qDebug() << "Took ownership of the newly loaded machine object: " << QString::fromStdString(machine->getName());
+    // --- END OF GUI AND MODEL RESET ---
 
-
-    // Aktualizuj interné premenné GUI (porty atď.), ak je to potrebné
-    // V tomto prípade pri načítaní asi nie je potrebné meniť porty,
-    // tie sa používajú skôr pri pripájaní k bežiacemu automatu.
-    // connectedAutomatonName = QString::fromStdString(machine->getName()); // Možno aktualizovať
-
-    // Prekresli automat a naplň UI dáta z nového modelu
+    // --- Populate GUI with new model ---
     qDebug() << "Redrawing automaton and populating UI from the new model...";
-    redrawAutomatonFromModel();
-    populateUIFromModel();
+    redrawAutomatonFromModel(); // Redraws states and transitions on the scene
+    populateUIFromModel();      // Populates QGroupBoxes for vars, ins, outs
 
-    setInputFieldsEnabled(false);
+    setInputFieldsEnabled(false); // Default for a newly loaded, non-connected automaton
 
-    // Metóda 1: Priame nastavenie viditeľnosti (odporúčané)
+    // Update global ID counters for NEW items to be added via GUI
+    int maxStateIdEncountered = -1;
+    if (machine) {
+        for (const auto& state_pair : machine->getStates()) {
+            if (state_pair.second && state_pair.second->getStateId() > maxStateIdEncountered) {
+                maxStateIdEncountered = state_pair.second->getStateId();
+            }
+        }
+        this->objectStateId = maxStateIdEncountered + 1;
 
-    // Povoľ relevantné tlačidlá (napr. Save, Run, Edit...)
-
-
-    // ui->terminateAutomatButton->setEnabled(false); // Terminate nemá zmysel pre nebežiaci automat
-    // ui->connectButton->setEnabled(true); // Connect by malo byť vždy povolené?
+        int maxTransIdEncountered = -1;
+        for (const auto& trans_ptr : machine->getTransitions()) {
+            if (trans_ptr && trans_ptr->getTransitionId() > maxTransIdEncountered) {
+                maxTransIdEncountered = trans_ptr->getTransitionId();
+            }
+        }
+        this->objectTransitionId = maxTransIdEncountered + 1;
+        qDebug() << "MainWindow ID counters updated: nextStateId=" << this->objectStateId
+                 << ", nextTransitionId=" << this->objectTransitionId;
+    }
 
     QMessageBox::information(this, "Load Successful", "Automaton model loaded successfully from:\n" + fileName);
-    // Voliteľne: Ulož si cestu pre budúce použitie
-    // lastUsedLoadPath = QFileInfo(fileName).absolutePath();
 }
 
 void MainWindow::redrawAutomatonFromModel() {
+
+    // Funkcia na nájdenie elipsy a jej stredu v súradniciach scény
+auto getVisualCenterOfStateItem = [](QGraphicsItemGroup* stateItemGroup) -> QPointF {
+    if (!stateItemGroup) return QPointF(); // Ak je null, vráť nulový bod
+
+    for (QGraphicsItem* child : stateItemGroup->childItems()) {
+        if (QGraphicsEllipseItem* ellipse = dynamic_cast<QGraphicsEllipseItem*>(child)) {
+            // ellipse->rect() je v lokálnych súradniciach elipsy (napr. (0,0,60,60))
+            // ellipse->rect().center() je stred elipsy v jej vlastných súradniciach
+            // mapToScene pretransformuje tento lokálny stred do súradníc scény
+            return stateItemGroup->mapToScene(ellipse->rect().center());
+        }
+    }
+    // Fallback, ak sa elipsa nenájde (nemalo by nastať pri správnej štruktúre)
+    qWarning() << "Ellipse not found in state group, using sceneBoundingRect().center() as fallback.";
+    return stateItemGroup->sceneBoundingRect().center();
+};
+
     // 1. Základné kontroly a vyčistenie
     if (!machine) {
         qWarning() << "Cannot redraw: machine model is null.";
@@ -970,9 +1001,8 @@ void MainWindow::redrawAutomatonFromModel() {
     }
     qDebug() << "Redrawing automaton '" << QString::fromStdString(machine->getName()) << "' from loaded model.";
     scene->clear(); // Vyčisti scénu od starých prvkov
-    // Resetni počítadlá ID, ak ich používaš na generovanie nových ID pri kreslení
-    objectStateId = 0;
-    objectTransitionId = 0;
+    // Note: MainWindow's objectStateId and objectTransitionId are for *new* GUI items.
+    // Here, we use IDs directly from the loaded model.
 
     // 2. Získaj stavy a vypočítaj rozloženie
     const auto& statesMap = machine->getStates();
@@ -984,6 +1014,7 @@ void MainWindow::redrawAutomatonFromModel() {
 
     // Výpočet rozmerov mriežky (gridu)
     int itemsPerRow = static_cast<int>(std::ceil(std::sqrt(static_cast<double>(stateCount))));
+    if (itemsPerRow == 0) itemsPerRow = 1; // Avoid division by zero if stateCount is 0 (though already checked)
     qDebug() << "Calculated items per row:" << itemsPerRow;
 
     // Rozmery a medzery medzi prvkami
@@ -991,7 +1022,7 @@ void MainWindow::redrawAutomatonFromModel() {
     const qreal itemHeight = 60;
     const qreal hSpacing = 100; // Horizontálna medzera
     const qreal vSpacing = 100; // Vertikálna medzera
-    const qreal margin = 20;   // Okraj od kraja scény
+    const qreal margin = 50;    // Okraj od kraja scény (increased for better visibility)
 
     // Mapa na uloženie vytvorených QGraphicsItemGroup pre stavy (kľúčom je meno stavu)
     std::map<std::string, QGraphicsItemGroup*> stateSceneItems;
@@ -1001,26 +1032,25 @@ void MainWindow::redrawAutomatonFromModel() {
     int currentCol = 0;
     for (const auto& pair : statesMap) {
         const std::string& stateName = pair.first;
-        const State* state = pair.second.get();
-        // Získaj ID stavu (buď z objektu alebo vygeneruj)
-        // int stateId = state->getStateId(); // Ak máš metódu getStateId
-        int stateId = objectStateId++;       // Alebo generuj nové
+        State* state = pair.second.get(); // Get non-const State pointer
+        if (!state) {
+            qWarning() << "Skipping null state pointer for name:" << QString::fromStdString(stateName);
+            continue;
+        }
+
+        int stateId = state->getStateId(); // Use the ID from the State object itself
 
         // Vypočítaj pozíciu
         qreal x = margin + currentCol * (itemWidth + hSpacing);
         qreal y = margin + currentRow * (itemHeight + vSpacing);
 
-        // --- Vytvorenie vizuálnej reprezentácie (rovnaký kód ako v on_addStateButton_clicked) ---
         QGraphicsItemGroup *group = new QGraphicsItemGroup();
         QGraphicsEllipseItem *ellipse = new QGraphicsEllipseItem(0, 0, itemWidth, itemHeight, group);
 
-        // Nastav farbu podľa toho, či je počiatočný (alebo neskôr aktívny)
         bool isInitial = (state == machine->getInitialState());
-        ellipse->setBrush(QBrush(isInitial ? activeStateColor : normalStateColor)); // Zvýrazni počiatočný
-        // ellipse->setBrush(QBrush(normalStateColor)); // Alebo začni všetko normálne
-
+        ellipse->setBrush(QBrush(isInitial ? activeStateColor : normalStateColor));
         ellipse->setPen(QPen(Qt::black));
-        ellipse->setData(0, QVariant(QString::fromStdString(stateName))); // Meno stavu do elipsy (pre updateStateItemColor)
+        ellipse->setData(0, QVariant(QString::fromStdString(stateName))); // Store original name for color updates
 
         QGraphicsTextItem *text = new QGraphicsTextItem(QString::fromStdString(stateName), group);
         QRectF textRect = text->boundingRect();
@@ -1031,18 +1061,41 @@ void MainWindow::redrawAutomatonFromModel() {
         group->setPos(x, y);
         group->setFlag(QGraphicsItem::ItemIsMovable);
         group->setFlag(QGraphicsItem::ItemIsSelectable);
-        group->setData(0, QVariant(stateId)); // Ulož ID stavu
-        group->setData(1, "state");            // Identifikátor typu "state"
-        group->setData(2, QVariant(QString::fromStdString(stateName))); // Ulož aj meno stavu do groupy
+        group->setData(0, QVariant(stateId)); // Ulož ID stavu (key 0 for state ID)
+        group->setData(1, "state");           // Identifikátor typu "state" (key 1 for type)
+        group->setData(2, QVariant(QString::fromStdString(stateName))); // Ulož aj meno stavu (key 2 for name)
 
-        // TODO: Znovu pripojiť signál na pohyb, ak chceš dynamické prekresľovanie šípok pri pohybe
-        // connect(scene, &QGraphicsScene::changed, ...)
+        scene->addItem(group);
+        stateSceneItems[stateName] = group;
+        state->currentPos = getVisualCenterOfStateItem(group); // Initialize currentPos for the State object
 
-        scene->addItem(group); // Pridaj skupinu do scény
-        stateSceneItems[stateName] = group; // Ulož skupinu do mapy pre kreslenie prechodov
-        qDebug() << " Drew state:" << QString::fromStdString(stateName) << "at (" << x << "," << y << ")";
+        // Connect the position change signal for this specific group
+        
+        QMetaObject::Connection conn = connect(this->scene, &QGraphicsScene::changed, this, [this, group, state]() {
+            if (addingTransitionMode) return;
+        
+            // This check is mostly for robustness during development,
+            // proper connection management should make it less necessary.
+            if (!group || !group->scene()) {
+                // qDebug() << "State move lambda: group no longer valid or not in a scene.";
+                return;
+            }
+        
+            if (group->isSelected()) {
+                QPointF newVisualCenter = MainWindow::getVisualCenterOfStateItem_static(group);
+                if (state && state->currentPos != newVisualCenter) {
+                    qDebug().nospace() << "LAMBDA DETECTED MOVE for '" << QString::fromStdString(state->getName())
+                                       << "': Old currentPos=" << state->currentPos
+                                       << ", NewVisualCenter=" << newVisualCenter;
+                    state->currentPos = newVisualCenter;
+                    state->updateTransitionPositions(this->scene, group, machine);
+                }
+            }
+        });
+        stateMoveConnections.append(conn); // Store the connection
 
-        // Posuň sa v mriežke
+        qDebug() << " Drew state:" << QString::fromStdString(stateName) << "ID:" << stateId << "at (" << x << "," << y << ")";
+
         currentCol++;
         if (currentCol >= itemsPerRow) {
             currentCol = 0;
@@ -1054,50 +1107,103 @@ void MainWindow::redrawAutomatonFromModel() {
     qDebug() << "Drawing transitions...";
     const auto& transitionsList = machine->getTransitions();
     for (const auto& trans_ptr : transitionsList) {
-        const Transition* transition = trans_ptr.get();
-        const std::string& sourceName = transition->getSourceState()->getName();
-        const std::string& targetName = transition->getTargetState()->getName();
-        // Získaj ID prechodu (buď z objektu alebo vygeneruj)
-        // int transId = transition->getTransitionId();
-        int transId = objectTransitionId++;
+        const Transition* transition_model = trans_ptr.get(); // Používam transition_model pre prehľadnosť
+        State* sourceState_model = transition_model->getSourceState();
+        State* targetState_model = transition_model->getTargetState();
 
-        // Nájdi zodpovedajúce QGraphicsItemGroup pre stavy
+        if (!sourceState_model || !targetState_model) {
+            qWarning() << "REDRAW: Skipping transition, null source/target model state. TransID:" << (transition_model ? transition_model->getTransitionId() : -1);
+            continue;
+        }
+
+        const std::string& sourceName = sourceState_model->getName();
+        const std::string& targetName = targetState_model->getName();
+        int transId = transition_model->getTransitionId();
+
         auto itSource = stateSceneItems.find(sourceName);
         auto itTarget = stateSceneItems.find(targetName);
 
         if (itSource != stateSceneItems.end() && itTarget != stateSceneItems.end()) {
-            QGraphicsItemGroup* startItemGroup = itSource->second;
-            QGraphicsItemGroup* endItemGroup = itTarget->second;
+            QGraphicsItemGroup* startItemGroup_gui = itSource->second;
+            QGraphicsItemGroup* endItemGroup_gui = itTarget->second;
 
-            // Získaj stredové body skupín
-            QPointF startCenter = startItemGroup->sceneBoundingRect().center();
-            QPointF endCenter = endItemGroup->sceneBoundingRect().center();
+            // <<<---- DEBUG VÝPISY ZAČIATOK ---->>>
+            QPointF startCenter = getVisualCenterOfStateItem(startItemGroup_gui);
+            QPointF endCenter = getVisualCenterOfStateItem(endItemGroup_gui);
+            qDebug().nospace() << "REDRAW: For transID " << transId << " (" << QString::fromStdString(sourceName) << " -> " << QString::fromStdString(targetName) << ")";
+            qDebug().nospace() << "    Source GUI item at: " << startItemGroup_gui->pos() << ", Calculated Center: " << startCenter;
+            qDebug().nospace() << "    Target GUI item at: " << endItemGroup_gui->pos() << ", Calculated Center: " << endCenter;
+            // <<<---- DEBUG VÝPISY KONIEC ---->>>
 
-            // Vytvor label prechodu (z condition a delay)
-            QString label = QString::fromStdString(transition->getCondition());
-            // Ak getCondition nevracia delay, pridaj ho:
-            // int delayMs = transition->getDelayMs();
-            // if (delayMs > 0 && !label.contains("@")) { // Pridaj len ak tam už nie je
-            //     label += " @" + QString::number(delayMs);
-            // }
+            QString label = QString::fromStdString(transition_model->getCondition());
+            QPointF actualStartPos_from_drawArrow, actualEndPos_from_drawArrow; // Premenované pre jasnosť
 
-            // Vykresli šípku
-            QPointF actualStartPos, actualEndPos; // Nepoužívame ich tu, ale drawArrow ich môže potrebovať
-            MainWindowUtils::drawArrow(startCenter, endCenter, label, transId, scene, &actualStartPos, &actualEndPos);
-             qDebug() << "  Drew transition:" << QString::fromStdString(sourceName) << "->" << QString::fromStdString(targetName) << "Label:" << label;
+            QGraphicsItemGroup* transitionGroup_gui = MainWindowUtils::drawArrow(
+                startCenter,
+                endCenter,
+                label,
+                transId,
+                scene,
+                &actualStartPos_from_drawArrow,
+                &actualEndPos_from_drawArrow
+            );
 
+            // <<<---- DEBUG VÝPISY ZAČIATOK ---->>>
+            qDebug().nospace() << "    drawArrow for transID " << transId << " returned: "
+                     << "actualStartPos=" << actualStartPos_from_drawArrow
+                     << ", actualEndPos=" << actualEndPos_from_drawArrow;
+            // <<<---- DEBUG VÝPISY KONIEC ---->>>
+
+            if (transitionGroup_gui) {
+                sourceState_model->addOutgoingTransitionGroup(transitionGroup_gui, actualStartPos_from_drawArrow, actualEndPos_from_drawArrow);
+                targetState_model->addIncomingTransitionGroup(transitionGroup_gui, actualStartPos_from_drawArrow, actualEndPos_from_drawArrow);
+                // Pôvodný debug log si nechal, čo je fajn, ale môžeme ho doplniť o body:
+                qDebug().nospace() << "  Drew and registered transition: " << QString::fromStdString(sourceName) << "->" << QString::fromStdString(targetName)
+                         << " Label: " << label << " ID: " << transId
+                         << " (Points used for registration: " << actualStartPos_from_drawArrow << ", " << actualEndPos_from_drawArrow << ")";
+            } else {
+                qWarning() << "  REDRAW: Failed to draw arrow for transition ID:" << transId << "from" << QString::fromStdString(sourceName) << "to" << QString::fromStdString(targetName);
+            }
         } else {
-            qWarning() << " Skipping transition draw: Cannot find scene item for source '" << QString::fromStdString(sourceName) << "' or target '" << QString::fromStdString(targetName) << "'";
+            qWarning() << " REDRAW: Skipping transition draw/registration: Cannot find scene item for source '" << QString::fromStdString(sourceName) << "' or target '" << QString::fromStdString(targetName) << "'";
         }
     }
 
     qDebug() << "Finished redrawing automaton.";
     
-    GraphicsView* gView = ui->graphicsView; // Use the correct type
-
+    GraphicsView* gView = qobject_cast<GraphicsView*>(ui->graphicsView);
     if(gView) {
-        gView->ensureVisible(QRectF(0, 0, 1, 1), 0, 0);
+        // Attempt to fit all items in view, or at least ensure (0,0) is visible.
+        if (!scene->items().isEmpty()) {
+            gView->fitInView(scene->itemsBoundingRect(), Qt::KeepAspectRatio);
+            qDebug() << "Fitted scene contents into view.";
+        } else {
+            gView->ensureVisible(QRectF(0, 0, 1, 1), 0, 0); // Fallback for empty scene
+            qDebug() << "Ensured (0,0) is visible for empty scene.";
+        }
     }
+}
+
+
+QPointF MainWindow::getVisualCenterOfStateItem_static(QGraphicsItemGroup* stateItemGroup) {
+    if (!stateItemGroup) {
+        qWarning() << "MainWindow::getVisualCenterOfStateItem_static: Received null stateItemGroup.";
+        return QPointF(); // Vráť neplatný bod alebo predvolený bod
+    }
+
+    for (QGraphicsItem* child : stateItemGroup->childItems()) {
+        if (QGraphicsEllipseItem* ellipse = dynamic_cast<QGraphicsEllipseItem*>(child)) {
+            // ellipse->rect() je v lokálnych súradniciach elipsy (napr. (0,0,šírka,výška))
+            // ellipse->rect().center() je stred elipsy v jej vlastných súradniciach (napr. (šírka/2, výška/2))
+            // mapToScene pretransformuje tento lokálny stred do súradníc scény
+            return stateItemGroup->mapToScene(ellipse->rect().center());
+        }
+    }
+
+    // Fallback, ak sa elipsa nenájde (nemalo by nastať pri správnej štruktúre skupiny)
+    qWarning() << "MainWindow::getVisualCenterOfStateItem_static: Ellipse not found in state group for item at scene pos"
+               << stateItemGroup->scenePos() << ". Falling back to sceneBoundingRect().center().";
+    return stateItemGroup->sceneBoundingRect().center();
 }
 
 void MainWindow::setInputFieldsEnabled(bool enabled) {
@@ -1126,93 +1232,95 @@ void MainWindow::setInputFieldsEnabled(bool enabled) {
     qDebug() << "Updated enabled state for" << inputEdits.count() << "input fields.";
 }
 
-// POMOCNÁ funkcia na rekurzívne čistenie layoutov - BEZPEČNEJŠIA VERZIA
+// Improved clearLayout
 void MainWindow::clearLayout(QLayout* layout) {
     if (!layout) return;
     QLayoutItem* item;
-    while ((item = layout->takeAt(0)) != nullptr) {
-        // Odpojiť všetky signály widgetu
+    while ((item = layout->takeAt(0)) != nullptr) { // Item is now ours to delete
         if (QWidget* widget = item->widget()) {
-            widget->disconnect(); // <<< DÔLEŽITÉ
-            widget->deleteLater();
+            widget->disconnect(); // Good for safety
+            widget->deleteLater();  // Schedule widget for deletion
+        } else if (QLayout* subLayout = item->layout()) {
+            clearLayout(subLayout); // Recursively clear sub-layout
+            // QLayoutItem owns the subLayout if item->layout() was true.
+            // Deleting 'item' will handle the subLayout.
         }
-        else if (QLayout* subLayout = item->layout()) {
-            clearLayout(subLayout);
-            delete subLayout;
-        }
+        // After handling widget or sublayout, delete the QLayoutItem itself.
+        // This also deletes QSpacerItem if the item was a spacer.
+        delete item;
     }
-    qDebug() << "Layout cleared (items removed/deleted).";
+    qDebug() << "Layout cleared (all items taken and deleted).";
 }
 
-// Upravená clearVariableList, ktorá volá pomocnú funkciu
-void MainWindow::clearVariableList() {
-    qDebug() << "Clearing Variable List UI";
-    if (QLayout* layout = ui->editVarGroupBox->layout()) {
-         qDebug() << "Layout found, calling clearLayout...";
-        clearLayout(layout); // Zavolaj bezpečnú pomocnú funkciu
+
+// Helper to reset GroupBox layout
+void MainWindow::resetGroupBoxLayout(QGroupBox* groupBox) {
+    if (!groupBox) {
+        qWarning() << "resetGroupBoxLayout: groupBox is null.";
+        return;
+    }
+    if (QLayout* layout = groupBox->layout()) {
+        clearLayout(layout); // Clear items from the layout (widgets, sublayouts, spacers)
+        delete layout;       // Delete the layout object itself. groupBox->layout() will become nullptr.
+        qDebug() << "Layout for GroupBox" << groupBox->objectName() << "has been deleted.";
     } else {
-         qDebug() << "No layout found for editVarGroupBox.";
+        qDebug() << "GroupBox" << groupBox->objectName() << "had no layout to reset.";
     }
 }
 
+void MainWindow::clearVariableList() {
+    qDebug() << "Clearing Variable List UI (resetting layout for editVarGroupBox)";
+    resetGroupBoxLayout(ui->editVarGroupBox);
+}
+
+void MainWindow::clearInputList() {
+    qDebug() << "Clearing Input List UI (resetting layout for editInGroupBox)";
+    resetGroupBoxLayout(ui->editInGroupBox);
+}
+
+void MainWindow::clearOutputList() {
+    qDebug() << "Clearing Output List UI (resetting layout for trackingOutputsGroupBox)";
+    resetGroupBoxLayout(ui->trackingOutputsGroupBox);
+}
+
+
+// Corrected populateUIFromModel (remove internal clear calls)
 void MainWindow::populateUIFromModel() {
-    // 1. Basic Check
     if (!machine) {
          qWarning() << "Cannot populate UI: machine model is null.";
          return;
     }
-     qDebug() << "Populating UI elements from loaded model for machine:" << QString::fromStdString(machine->getName());
+    qDebug() << "Populating UI elements from loaded model for machine:" << QString::fromStdString(machine->getName());
 
-    // --- Clear existing UI lists FIRST ---
-    // (Assuming you have implemented these as shown previously)
+    // Clearing is now handled in on_loadJsonButton_clicked BEFORE this function.
 
-    // --- 2. Populate Variables ---
+    // --- Populate Variables ---
     qDebug() << "Populating Variables...";
     const auto& variablesMap = machine->getVariables();
-    if (!variablesMap.empty()) clearVariableList();
-    qDebug() << "0";
     for (const auto& pair : variablesMap) {
-        const Variable* var = pair.second.get(); // Get raw pointer from unique_ptr
-        qDebug() << "1";
-        qDebug() << " Adding variable to UI:" << QString::fromStdString(var->getName());
-        qDebug() << "2";
-        // Call your existing function to add the row to the UI
+        const Variable* var = pair.second.get();
         addVarRowToGUI(var->getName(), var->getTypeHint(), var->getValueAsString());
-        qDebug() << "3";
     }
 
-    qDebug() << "4";
-
-
-
-    // --- 3. Populate Inputs ---
+    // --- Populate Inputs ---
     qDebug() << "Populating Inputs...";
     const auto& inputsMap = machine->getInputs();
-    if (!inputsMap.empty()) clearInputList();
     for (const auto& pair : inputsMap) {
          const Input* input = pair.second.get();
-         qDebug() << " Adding input to UI:" << QString::fromStdString(input->getName());
-         // Call your existing function to add the row
          addInputRowToGUI(input->getName());
-         // Optionally, set the initial value in the QLineEdit if you store it
          QLineEdit* le = ui->editInGroupBox->findChild<QLineEdit*>(QString::fromStdString(input->getName()));
          if(le) {
-             // Input value might be empty initially, use value_or
              le->setText(QString::fromStdString(input->getLastValue().value_or("")));
          }
     }
 
-
-
-    // --- 4. Populate Outputs ---
+    // --- Populate Outputs ---
     qDebug() << "Populating Outputs...";
     const auto& outputsMap = machine->getOutputs();
-    if (!outputsMap.empty()) clearOutputList();
-    QGroupBox *groupBox = ui->trackingOutputsGroupBox; // Get the target group box
+    QGroupBox *groupBox = ui->trackingOutputsGroupBox;
     if(groupBox) {
-        // Ensure layout exists (get or create)
         QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(groupBox->layout());
-        if (!layout) {
+        if (!layout) { // This will be true if resetGroupBoxLayout was called
             qDebug() << "Creating new QVBoxLayout for trackingOutputsGroupBox.";
             layout = new QVBoxLayout();
             layout->setSpacing(2);
@@ -1226,80 +1334,45 @@ void MainWindow::populateUIFromModel() {
             const std::string& outputName = output->getName();
             qDebug() << " Adding output to UI:" << QString::fromStdString(outputName);
 
-            // Create the display text (e.g., "outputName = ?")
-             // We don't usually load the *last sent value* from the JSON definition,
-             // so we'll initialize it with a placeholder or just the name.
-            QString labelText = QString::fromStdString(outputName) + " = ?"; // Placeholder value
+            QString labelText = QString::fromStdString(outputName) + " = ?";
+            QLabel *outputLabel = new QLabel(labelText, groupBox);
+            outputLabel->setObjectName(QString::fromStdString(outputName));
 
-            // --- Create Widgets for the output row ---
-             QLabel *outputLabel = new QLabel(labelText, groupBox);
-             // Set object name using the ACTUAL output name for later updates
-             outputLabel->setObjectName(QString::fromStdString(outputName));
+            QHBoxLayout *rowLayout = new QHBoxLayout();
+            rowLayout->addWidget(outputLabel);
 
-             // --- Optional: Add Delete Button for Outputs ---
-             QHBoxLayout *rowLayout = new QHBoxLayout();
-             rowLayout->addWidget(outputLabel); // Add label first
+            QPushButton *deleteButton = new QPushButton("x", groupBox);
+            deleteButton->setFixedSize(20, 20);
+            deleteButton->setToolTip("Delete this output");
+            rowLayout->addWidget(deleteButton);
 
-             QPushButton *deleteButton = new QPushButton("x", groupBox);
-             deleteButton->setFixedSize(20, 20); // Make button small
-             deleteButton->setToolTip("Delete this output");
-             rowLayout->addWidget(deleteButton); // Add delete button
+            connect(deleteButton, &QPushButton::clicked, this, [this, groupBox, rowLayout, outputName]() { // Capture groupBox
+                qDebug() << "Delete button clicked for output:" << QString::fromStdString(outputName);
+                if (machine) machine->removeOutput(outputName);
 
-             // Connect delete button
-             connect(deleteButton, &QPushButton::clicked, this, [this, layout, rowLayout, outputName]() {
-                 qDebug() << "Delete button clicked for output:" << QString::fromStdString(outputName);
-                 // Remove from machine first
-                 machine->removeOutput(outputName);
-                 // Remove the row layout and its widgets from the UI layout
-                 layout->removeItem(rowLayout);
-                 // Delete widgets within the rowLayout FIRST
-                 QLayoutItem *childItem;
-                 while((childItem = rowLayout->takeAt(0)) != nullptr) {
-                     delete childItem->widget();
-                     delete childItem;
-                 }
-                 delete rowLayout; // Then delete the row layout itself
-                 qDebug() << "Output removed from UI and machine:" << QString::fromStdString(outputName);
-                 // Optional: Hide groupbox if last output removed
-                 if(layout->count() <= 1) { // Check if only stretch remains
-                     ui->trackingOutputsGroupBox->setVisible(false);
-                 }
-             });
-             // --- End Optional Delete Button ---
-
-            // Add the row layout (containing label and button) to the main VBox layout
-            // Insert at index 0 to add new items at the top (before the stretch)
-            layout->insertLayout(0, rowLayout);
-
-        } // End for loop over outputs
-
+                // Get layout from groupBox, not a captured 'layout' variable which might be stale
+                QVBoxLayout* currentMainLayout = qobject_cast<QVBoxLayout*>(groupBox->layout());
+                if (currentMainLayout) {
+                    currentMainLayout->removeItem(rowLayout);
+                }
+                QLayoutItem *childItem;
+                while((childItem = rowLayout->takeAt(0)) != nullptr) {
+                    if(childItem->widget()) childItem->widget()->deleteLater();
+                    delete childItem;
+                }
+                delete rowLayout;
+                qDebug() << "Output removed from UI and machine:" << QString::fromStdString(outputName);
+                // Optional: Hide groupbox if last output removed
+                // if(currentMainLayout && currentMainLayout->count() <= 1) { // Check if only stretch remains
+                //     groupBox->setVisible(false);
+                // }
+            });
+            layout->insertLayout(0, rowLayout); // Insert before the stretch
+        }
     } else {
         qWarning() << "Cannot populate outputs: ui->trackingOutputsGroupBox is null.";
     }
-     qDebug() << "Finished populateUIFromModel.";
-}
-
-// Podobne uprav aj clearInputList a clearOutputList, aby volali clearLayout
-void MainWindow::clearInputList() {
-    qDebug() << "Clearing Input List UI";
-    if (QLayout* layout = ui->editInGroupBox->layout()) {
-        qDebug() << "Layout found, calling clearLayout...";
-        clearLayout(layout);
-    } else {
-        qDebug() << "No layout found for editInGroupBox.";
-    }
-}
-
-void MainWindow::clearOutputList() {
-    qDebug() << "Clearing Output List UI";
-   if (QLayout* layout = ui->trackingOutputsGroupBox->layout()) {
-        qDebug() << "Layout found, calling clearLayout...";
-        clearLayout(layout);
-        // Ak si pridával stretch, musíš ho pridať znova, ak chceš
-        // layout->addStretch();
-    } else {
-         qDebug() << "No layout found for trackingOutputsGroupBox.";
-    }
+    qDebug() << "Finished populateUIFromModel.";
 }
 
 
@@ -1387,7 +1460,7 @@ void MainWindow::addVarRowToGUI(const std::string& name, const std::string& type
     // Ensure the target GroupBox exists in the UI
     if (!ui->editVarGroupBox) {
         qWarning() << "Cannot add variable row: ui->editVarGroupBox is null. Check objectName in Designer.";
-        return;
+        
     }
 
     // Get the layout of the GroupBox, assuming/creating QVBoxLayout
@@ -1428,29 +1501,18 @@ void MainWindow::addVarRowToGUI(const std::string& name, const std::string& type
     deleteButton->setToolTip("Delete this variable");
     deleteButton->setObjectName(baseObjectName + "_deleteBtn");
 
-    // Connect the delete button's clicked signal to a lambda function
     connect(deleteButton, &QPushButton::clicked, this, [this, rowLayout, name]() {
-        // Remove the row from the layout
-        QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(ui->editVarGroupBox->layout());
-        if (mainLayout) {
-            QLayoutItem* item = nullptr;
-            for (int i = 0; i < mainLayout->count(); ++i) {
-                item = mainLayout->itemAt(i);
-                if (item && item->layout() == rowLayout) {
-                    // Remove the layout and its widgets
-                    while (QLayoutItem* child = rowLayout->takeAt(0)) {
-                        delete child->widget();
-                        delete child;
-                    }
-                    mainLayout->removeItem(item);
-                    delete rowLayout;
-                    break;
-                }
-            }
+        QVBoxLayout* currentMainLayout = qobject_cast<QVBoxLayout*>(ui->editVarGroupBox->layout()); // Get current layout
+        if (currentMainLayout) {
+            currentMainLayout->removeItem(rowLayout);
         }
+         while (QLayoutItem* child = rowLayout->takeAt(0)) {
+            if(child->widget()) child->widget()->deleteLater();
+            delete child;
+        }
+        delete rowLayout;
 
-        // Remove the variable from the machine
-        machine->removeVariable(name);
+        if(machine) machine->removeVariable(name);
         qDebug() << "Variable removed from UI and machine:" << QString::fromStdString(name);
     });
 
@@ -1515,7 +1577,7 @@ void MainWindow::handleVariableValueEdited() {
 
 void MainWindow::addInputRowToGUI(const std::string& name) {
     // Ensure the target GroupBox exists in the UI
-    if (!ui->editVarGroupBox) {
+    if (!ui->editInGroupBox) {
         qWarning() << "Cannot add variable row: ui->editVarGroupBox is null. Check objectName in Designer.";
         return;
     }
@@ -1564,26 +1626,21 @@ void MainWindow::addInputRowToGUI(const std::string& name) {
     // Connect the delete button's clicked signal to a lambda function
     connect(deleteButton, &QPushButton::clicked, this, [this, rowLayout, name]() {
         // Remove the row from the layout
-        QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(ui->editInGroupBox->layout());
-        if (mainLayout) {
-            QLayoutItem* item = nullptr;
-            for (int i = 0; i < mainLayout->count(); ++i) {
-                item = mainLayout->itemAt(i);
-                if (item && item->layout() == rowLayout) {
-                    // Remove the layout and its widgets
-                    while (QLayoutItem* child = rowLayout->takeAt(0)) {
-                        delete child->widget();
-                        delete child;
-                    }
-                    mainLayout->removeItem(item);
-                    delete rowLayout;
-                    break;
-                }
-            }
+        QVBoxLayout* currentMainLayout = qobject_cast<QVBoxLayout*>(ui->editInGroupBox->layout()); // Get current layout
+        if (currentMainLayout) {
+            // (Logic to find and remove rowLayout from currentMainLayout - more robust than relying on captured mainLayout)
+            // For simplicity, we assume rowLayout is directly in currentMainLayout for now
+            // This requires currentMainLayout to be the parent of rowLayout which it is.
+            currentMainLayout->removeItem(rowLayout);
         }
-
-        // Remove the input from the machine
-        machine->removeInput(name);
+        // Delete widgets within the rowLayout
+        while (QLayoutItem* child = rowLayout->takeAt(0)) {
+            if(child->widget()) child->widget()->deleteLater();
+            delete child;
+        }
+        delete rowLayout; // Then delete the row layout itself
+        
+        if(machine) machine->removeInput(name); // Remove the input from the machine
         qDebug() << "Input removed from UI and machine:" << QString::fromStdString(name);
     });
 
@@ -2049,7 +2106,12 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
             QPointF actualStartPos;
             QPointF actualEndPos;
 
-            QGraphicsItemGroup *transitionGroup = MainWindowUtils::drawArrow(startItemForTransition->sceneBoundingRect().center(), endItemForTransition->sceneBoundingRect().center(), QString::fromStdString(condition.toStdString()), objectTransitionId, scene, &actualStartPos, &actualEndPos);
+            QGraphicsItemGroup *transitionGroup = MainWindowUtils::drawArrow(
+                MainWindow::getVisualCenterOfStateItem_static(startItemForTransition),
+                MainWindow::getVisualCenterOfStateItem_static(endItemForTransition),
+                QString::fromStdString(condition.toStdString()), objectTransitionId, scene, 
+                &actualStartPos, &actualEndPos
+            );
             
 
             

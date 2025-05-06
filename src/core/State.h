@@ -86,6 +86,8 @@ public:
     }
 
     void printTransitions() const;
+    
+    static QPointF getVisualCenterOfStateItem_static(QGraphicsItemGroup* stateItemGroup);
 
     QPointF currentPos; 
 

@@ -10,6 +10,7 @@
 #include <QUdpSocket> // Potrebný include
 #include <QMap>
 #include <QColor> // Pre farby
+#include <QGroupBox>
 
 // Forward declaration for the UI class (generated from .ui file)
 QT_BEGIN_NAMESPACE
@@ -38,6 +39,8 @@ public:
      * @brief Destructor.
      */
     ~MainWindow();
+
+    static QPointF getVisualCenterOfStateItem_static(QGraphicsItemGroup* stateItemGroup);
 
 private slots:
     /**
@@ -95,6 +98,8 @@ private:
     std::string portAutomat;
     QUdpSocket *guiSocket_ = nullptr;
 
+    QList<QMetaObject::Connection> stateMoveConnections;
+
     bool waitingForAutomatonInfo = false; // Flag for connection state
     QString connectedAutomatonName = "";   // Store name once connected
     QTimer *connectionTimeoutTimer = nullptr; // Optional: For timeout
@@ -108,6 +113,7 @@ private:
     void updateVariableDisplay(const std::string& varName, const std::string& newValue);
     void updateOutputDisplay(const std::string& outputName, const std::string& newValue);
 
+    void resetGroupBoxLayout(QGroupBox* groupBox);
 
     /**
      * @brief Visually highlights a state item.

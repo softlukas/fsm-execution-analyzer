@@ -39,6 +39,27 @@
  }
  
  
+ QPointF State::getVisualCenterOfStateItem_static(QGraphicsItemGroup* stateItemGroup) {
+    if (!stateItemGroup) {
+        qWarning() << "MainWindow::getVisualCenterOfStateItem_static: Received null stateItemGroup.";
+        return QPointF(); // Vráť neplatný bod alebo predvolený bod
+    }
+
+    for (QGraphicsItem* child : stateItemGroup->childItems()) {
+        if (QGraphicsEllipseItem* ellipse = dynamic_cast<QGraphicsEllipseItem*>(child)) {
+            // ellipse->rect() je v lokálnych súradniciach elipsy (napr. (0,0,šírka,výška))
+            // ellipse->rect().center() je stred elipsy v jej vlastných súradniciach (napr. (šírka/2, výška/2))
+            // mapToScene pretransformuje tento lokálny stred do súradníc scény
+            return stateItemGroup->mapToScene(ellipse->rect().center());
+        }
+    }
+
+    // Fallback, ak sa elipsa nenájde (nemalo by nastať pri správnej štruktúre skupiny)
+    qWarning() << "MainWindow::getVisualCenterOfStateItem_static: Ellipse not found in state group for item at scene pos"
+               << stateItemGroup->scenePos() << ". Falling back to sceneBoundingRect().center().";
+    return getVisualCenterOfStateItem_static(stateItemGroup);
+}
+
 void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup* stateGroup, Machine *machine) {
     
     qDebug() << "----------------------------------------------------------------";
@@ -68,7 +89,7 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
         //QGraphicsItemGroup* group = MainWindowUtils::findItemGroupByIdAndType(scene, id, "Transition");
         QGraphicsItemGroup* group = std::get<0>(transition);
 
-        const QPointF startPos = stateGroup->sceneBoundingRect().center();
+        const QPointF startPos = getVisualCenterOfStateItem_static(stateGroup);
         const QPointF endPos = std::get<2>(transition);
 
         qDebug() << "StartPos:" << startPos;
@@ -113,7 +134,7 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
        
 
         const QPointF startPos = std::get<1>(transition);
-        const QPointF endPos = stateGroup->sceneBoundingRect().center();
+        const QPointF endPos = getVisualCenterOfStateItem_static(stateGroup);
 
         scene->removeItem(group);
 
