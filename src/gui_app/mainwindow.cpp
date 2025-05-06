@@ -1055,8 +1055,8 @@ void MainWindow::redrawAutomatonFromModel() {
     const auto& transitionsList = machine->getTransitions();
     for (const auto& trans_ptr : transitionsList) {
         const Transition* transition = trans_ptr.get();
-        const std::string& sourceName = transition->getSourceState().getName();
-        const std::string& targetName = transition->getTargetState().getName();
+        const std::string& sourceName = transition->getSourceState()->getName();
+        const std::string& targetName = transition->getTargetState()->getName();
         // Získaj ID prechodu (buď z objektu alebo vygeneruj)
         // int transId = transition->getTransitionId();
         int transId = objectTransitionId++;
@@ -1082,8 +1082,8 @@ void MainWindow::redrawAutomatonFromModel() {
             // }
 
             // Vykresli šípku
-            QVariant actualStartPos, actualEndPos; // Nepoužívame ich tu, ale drawArrow ich môže potrebovať
-            drawArrow(startCenter, endCenter, label, transId, scene, &actualStartPos, &actualEndPos);
+            QPointF actualStartPos, actualEndPos; // Nepoužívame ich tu, ale drawArrow ich môže potrebovať
+            MainWindowUtils::drawArrow(startCenter, endCenter, label, transId, scene, &actualStartPos, &actualEndPos);
              qDebug() << "  Drew transition:" << QString::fromStdString(sourceName) << "->" << QString::fromStdString(targetName) << "Label:" << label;
 
         } else {

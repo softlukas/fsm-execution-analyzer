@@ -481,7 +481,7 @@ void from_json(const json &j, Machine &m)
                     // --- Assuming Transition constructor: Transition(State& src, State& tgt, int id, const std::string& condition, int delayMs) ---
                     try
                     {
-                        auto newTrans = std::make_unique<Transition>(*sourceState, *targetState, transId, full_condition_for_object, final_delay_ms);
+                        auto newTrans = std::make_unique<Transition>(sourceState, targetState, transId, full_condition_for_object, final_delay_ms);
                         m.addTransition(std::move(newTrans));
                         qDebug() << " Added transition:" << QString::fromStdString(sourceName) << "->" << QString::fromStdString(targetName) << "ID:" << transId << "Cond:" << QString::fromStdString(full_condition_for_object) << "Delay:" << final_delay_ms;
                     }
