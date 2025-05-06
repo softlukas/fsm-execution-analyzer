@@ -32,6 +32,7 @@ signals:
      * @param item Pointer to the clicked QGraphicsItemGroup. Nullptr if background is clicked.
      */
     void stateItemClicked(QGraphicsItemGroup *item1, QGraphicsLineItem *item2);
+    void stateItemRightClicked(QGraphicsItemGroup *item1, QGraphicsLineItem *item2);
     
 
 protected:

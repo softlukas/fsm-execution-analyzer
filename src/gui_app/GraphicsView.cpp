@@ -40,7 +40,7 @@ void GraphicsView::wheelEvent(QWheelEvent *event) {
  */
 void GraphicsView::mousePressEvent(QMouseEvent *event) {
     // Check if the click was a left mouse button click
-    if (event->button() == Qt::LeftButton) {
+    //if (event->button() == Qt::LeftButton) {
         // Get the item at the click position
         QGraphicsItem *clickedItem = itemAt(event->pos()); // itemAt uses view coordinates
 
@@ -71,8 +71,15 @@ void GraphicsView::mousePressEvent(QMouseEvent *event) {
         }
 
         // Emit the signal with the found state item group (or nullptr if background/other item clicked)
-        emit stateItemClicked(stateItemGroup, lineItem); // Emit signal with nullptr for line item
-    }
+        if (event->button() == Qt::LeftButton) {
+            emit stateItemClicked(stateItemGroup, lineItem); // Emit signal with nullptr for line item
+        }
+        if(event->button() == Qt::RightButton) {
+            emit stateItemRightClicked(stateItemGroup, lineItem); // Emit signal with nullptr for line item
+            // Handle right-click logic here if needed
+        }
+        
+    //}
 
     // Call the base class implementation AFTER emitting the signal
     // to handle default behavior (like selection propagation which might clear our highlight)

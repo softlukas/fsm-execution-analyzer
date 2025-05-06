@@ -48,6 +48,8 @@
 #include <QFileDialog> // Potrebný pre dialóg na výber súboru
 #include <QStandardPaths> // Pre získanie predvoleného adresára (napr. Dokumenty)
 #include <QLayout>
+#include <chrono> // Pre std::chrono::milliseconds
+#include <thread> // Pre std::this_thread::sleep_for
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -67,6 +69,7 @@ MainWindow::MainWindow(QWidget *parent)
         qDebug() << "Graphics scene created and assigned to graphicsView.";
         // --- Connect custom view's signal to our slot ---
         connect(gView, &GraphicsView::stateItemClicked, this, &MainWindow::handleStateClick);
+        connect(gView, &GraphicsView::stateItemRightClicked, this, &MainWindow::handleRightClick);
         qDebug() << "Connected graphicsView stateItemClicked signal.";
     } else {
         qWarning() << "WARNING: QGraphicsView named 'graphicsView' not found or not promoted to GraphicsView in UI file.";
@@ -234,6 +237,7 @@ void MainWindow::on_setInitialStateButton_clicked() {
     }
 
 }
+
 
 void MainWindow::on_runAutomatButton_clicked() {
 
@@ -1987,7 +1991,21 @@ void MainWindow::on_addTransitionButton_clicked() {
     // QApplication::setOverrideCursor(Qt::CrossCursor);
 }
 
+void MainWindow::handleRightClick(QGraphicsItemGroup *item, QGraphicsLineItem *lineItem) {
+    // Handle right-click events on the state items
+    if (item) {
+        // edit state
+        if(!addingTransitionMode && item->data(1).toString() == "state") {
+            editState(item);
+            return;   
+        }
 
+        if(!addingTransitionMode && item->data(0).toString() == "Transition") {
+            editTransition(item);
+            return;
+        }   
+    }
+}
 
 
 
@@ -2020,16 +2038,7 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
     
     if (item) {
         
-        // edit state
-        if(!addingTransitionMode && item->data(1).toString() == "state") {
-            editState(item);
-            return;
-        }
-
-        if(!addingTransitionMode && item->data(1).toString() == "transition") {
-            editTransition(item);
-            return;
-        }   
+        
 
         
         //highlightItem(item); // Highlight the clicked item

@@ -53,6 +53,9 @@ private slots:
 
     void handleVariableValueEdited(); // Spoločný slot pre všetky QLineEdits
 
+    void handleInputValueEdited(); // Spoločný slot pre všetky QLineEdits
+
+    
    
     /**
      * @brief Slot executed when the 'Add Transition' button (addTransitionButton) is clicked.
@@ -68,7 +71,7 @@ private slots:
      */
     void handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *lineItem); // Slot to handle state clicks/selection
    
-
+    void handleRightClick(QGraphicsItemGroup *item, QGraphicsLineItem *lineItem); // Slot to handle right-clicks
     void on_addVariableButton_clicked();
     void on_addInputButton_clicked();
     void on_addOutputButton_clicked();
