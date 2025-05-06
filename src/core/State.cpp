@@ -82,9 +82,9 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
             qDebug() << "Group not found in the scene. Cannot remove.";
         }
 
-        if (startPos == endPos) {
-            continue;
-        }
+        //if (startPos == endPos) {
+            //continue;
+        //}
 
         QPointF actualStartPos;
         QPointF actualEndPos;
@@ -117,9 +117,9 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
 
         scene->removeItem(group);
 
-        if (startPos == endPos) {
-            continue;
-        }
+        //if (startPos == endPos) {
+            //continue;
+        //}
 
         QPointF actualStartPos;
         QPointF actualEndPos;
