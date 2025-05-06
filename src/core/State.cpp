@@ -7,6 +7,10 @@
 
  #include "State.h" // Include the header file
  #include <QGraphicsScene> // Include the QGraphicsScene header
+ #include "../gui_app/mainWindowUtils.h" // Include the MainWindowUtils header
+ #include <QDebug> // Include the QDebug header for debugging
+ #include "Transition.h" // Include the Transition header
+#include "Machine.h" // Include the Machine header
  
  State::State(const std::string& name, const std::string& action, int stateId)
      : stateName(name), stateOutput(action), stateId(stateId) {
@@ -34,28 +38,129 @@
      return stateId;
  }
  
+ 
+void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup* stateGroup, Machine *machine) {
+    
+    qDebug() << "----------------------------------------------------------------";
+    qDebug() << "move method called for state:" << QString::fromStdString(stateName);
+    qDebug() << "----------------------------------------------------------------";
 
- void State::updateTransitionPositions(QGraphicsScene* scene) {
-     // Declare incomingTransitions as a placeholder for demonstration
-     
+    printTransitions();
+    qDebug() << "----------------------------------------------------------------";
+
+
+    //if (outgoingTransitions.empty()) {
+        //qDebug() << "No outgoing transitions to update.";
+        //return;
+    //}
+    //if(incomingTranstions.empty()) {
+        //qDebug() << "No incoming transitions to update.";
+        //return;
+    //}
+
+    //qDebug() << "---------------------------------------------------------------";
+
+    for (const auto& [id, transition] : outgoingTransitions) {
+        Transition *trans = machine->getTransition(id);
+        State *targetState = trans->getTargetState();
+        std::string condition = trans->getCondition();
+
+        //QGraphicsItemGroup* group = MainWindowUtils::findItemGroupByIdAndType(scene, id, "Transition");
+        QGraphicsItemGroup* group = std::get<0>(transition);
+
+        const QPointF startPos = stateGroup->sceneBoundingRect().center();
+        const QPointF endPos = std::get<2>(transition);
+
+        qDebug() << "StartPos:" << startPos;
+        qDebug() << "EndPos:" << endPos;
+
+        if (group && scene->items().contains(group)) {
+            scene->removeItem(group);
+        } else if (!group) {
+            qDebug() << "Group is null. Cannot remove.";
+        } else {
+            qDebug() << "Group not found in the scene. Cannot remove.";
+        }
+
+        if (startPos == endPos) {
+            continue;
+        }
+
+        QPointF actualStartPos;
+        QPointF actualEndPos;
+
+        QGraphicsItemGroup* newTransition = MainWindowUtils::drawArrow(startPos, endPos, QString::fromStdString(condition), id, scene, &actualStartPos, &actualEndPos);
+        if (newTransition) {
+            outgoingTransitions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
+            targetState->setIncomingTransitionGroup(id, newTransition, actualStartPos, actualEndPos);
+            //incomingTranstions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
+        } else {
+            
+        }
+    }
+
+    if (outgoingTransitions.empty()) {
+       
+    }
+
+    for (const auto& [id, transition] : incomingTranstions) {
+        Transition *trans = machine->getTransition(id);
+        std::string condition = trans->getCondition();
+        State *sourceState = trans->getSourceState();
+
+        QGraphicsItemGroup* group = std::get<0>(transition);
+       
+
+        const QPointF startPos = std::get<1>(transition);
+        const QPointF endPos = stateGroup->sceneBoundingRect().center();
+
+        scene->removeItem(group);
+
+        if (startPos == endPos) {
+            continue;
+        }
+
+        QPointF actualStartPos;
+        QPointF actualEndPos;
+
+        QGraphicsItemGroup* newTransition = MainWindowUtils::drawArrow(startPos, endPos, QString::fromStdString(condition), id, scene, &actualStartPos, &actualEndPos);
+        if (newTransition) {
+            incomingTranstions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
+            //outgoingTransitions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
+            sourceState->setOutgoingTransitionGroup(id, newTransition, actualStartPos, actualEndPos);
+            
+        } else {
+            
+        }
+    }
+}
+
  
-     // Iterate through incoming transitions and update their positions
-     for (const auto& [id, transition] : incomingTranstions) {
-         QGraphicsItemGroup* group = std::get<0>(transition);
-         QVariant data1 = std::get<1>(transition);
-         QVariant data2 = std::get<2>(transition);
-         // Update the position of the transition group based on the state position
-         //group->setPos(scene->sceneRect().center());
-         scene->removeItem(group);
-     }
+
+
+
+
+void State::printTransitions() const {
+    qDebug() << "---------------------------------------------------------------";
+    qDebug() << "Incoming Transitions: for state " << QString::fromStdString(stateName);
+    for (const auto& [id, transition] : incomingTranstions) {
+        const QPointF startPos = std::get<1>(transition);
+        const QPointF endPos = std::get<2>(transition);
+        qDebug() << "ID:" << id << "Start Position:" << startPos << "End Position:" << endPos;
+
+        qDebug() << "Pointer to transition object in gui: " << std::get<0>(transition);
+    }
+    qDebug() << "---------------------------------------------------------------";
+    qDebug() << "Outgoing Transitions: for state " << QString::fromStdString(stateName);
+    for (const auto& [id, transition] : outgoingTransitions) {
+        const QPointF startPos = std::get<1>(transition);
+        const QPointF endPos = std::get<2>(transition);
+        qDebug() << "ID:" << id << "Start Position:" << startPos << "End Position:" << endPos;
+       
+        qDebug() << "Pointer to transition object in gui: " << std::get<0>(transition);
+        
+    }
+}
+
+
  
-     // Iterate through outgoing transitions and update their positions
-     for (const auto& [id, transition] : outgoingTransitions) {
-         QGraphicsItemGroup* group = std::get<0>(transition);
-         QVariant data1 = std::get<1>(transition);
-         QVariant data2 = std::get<2>(transition);
-         // Update the position of the transition group based on the state position
-         //group->setPos(scene->sceneRect().center());
-         scene->removeItem(group);
-     }
- }

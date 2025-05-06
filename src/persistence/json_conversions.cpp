@@ -154,10 +154,9 @@ void to_json(json &j, const Transition &t)
 
     // --- Build the JSON object ---
     j = json{
-        {"source", t.getSourceState().getName()}, // Name of the source state
-        {"target", t.getTargetState().getName()}, // Name of the target state
-        // Include sanitized target ID for code generation convenience
-        {"target_enum_id", "STATE_" + sanitize_for_identifier(t.getTargetState().getName())} // <<< ID pre enum cieľového stavu
+        {"source", t.getSourceState()->getName()},
+        {"target", t.getTargetState()->getName()},
+        {"target_enum_id", "STATE_" + sanitize_for_identifier(t.getTargetState()->getName())} // <<< ID pre enum cieľového stavu
     };
 
     // Add optional fields only if they are present

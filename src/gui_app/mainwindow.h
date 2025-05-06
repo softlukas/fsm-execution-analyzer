@@ -77,7 +77,7 @@ private slots:
     void on_renameButton_clicked();
     void on_setInitialStateButton_clicked();
 
-    QGraphicsItemGroup* drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene, QVariant *actualStartPos, QVariant *actualEndPos);
+    
 
 
     // If NOT using custom GraphicsView with stateItemClicked signal,
@@ -128,7 +128,7 @@ private:
     
 
 
-    void editTransition();
+    void editTransition(QGraphicsItemGroup *item);
 
     void editState(QGraphicsItemGroup *item);
 

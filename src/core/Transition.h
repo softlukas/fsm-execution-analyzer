@@ -31,15 +31,15 @@ public:
      * @param sourceState Pointer to the source state object.
      * @param targetState Pointer to the target state object.
      */
-    Transition(State& sourceState, State& targetState, const int transitionId, const std::string& condition = "", const int delayMs = 0);
+    Transition(State* sourceState, State* targetState, const int transitionId, const std::string& condition = "", const int delayMs = 0);
 
     // --- Getters ---
     const std::string& getSourceName() const;
     const std::string& getTargetName() const;
     const std::string& getTriggerEventName() const;
     const std::string& getGuardCondition() const;
-    const State& getSourceState() const;
-    const State& getTargetState() const;
+    State* getSourceState() const;
+    State* getTargetState() const;
     const int getDelayMs() const;
     const std::string& getCondition() const;
 
@@ -49,6 +49,19 @@ public:
     
     const std::string& DisplayTransition() const;
 
+    /**
+     * @brief Gets the ID of the destination state.
+     * @return const int The ID of the destination state.
+     */
+    int getDestinationStateId() const; // <-- PRIDAJ TENTO RIADOK
+
+    // Odporúčam pridať aj túto pre symetriu:
+    /**
+     * @brief Gets the ID of the source state.
+     * @return const int The ID of the source state.
+     */
+    int getSourceStateId() const;      // <-- AJ TENTO RIADOK
+
     // --- Setters ---
     void setCondition(const std::string& condition);
     void setDelay(int delayMs);
@@ -56,8 +69,8 @@ public:
     // We might add methods later to evaluate the condition, etc.
 
 private:
-    State sourceState;              // Source state object
-    State targetState;    // Name of the target state
+    State *sourceState;              // Source state object
+    State *targetState;    // Name of the target state
     std::string triggerEvent;       // Name of the input event required (if any)
     std::string guardCondition;     // Guard condition string (if any)
     std::string condition;

@@ -23,7 +23,7 @@ Transition::Transition(State* sourceState,
 }
 */
 
-Transition::Transition(State& sourceState, State& targetState, const int transitionId, 
+Transition::Transition(State* sourceState, State* targetState, const int transitionId, 
                        const std::string& condition, const int delayMs)
     : sourceState(sourceState), // Create a new State object
       targetState(targetState), // Create a new State object
@@ -36,11 +36,11 @@ Transition::Transition(State& sourceState, State& targetState, const int transit
       }
 
 
-    const State& Transition::getSourceState() const {
+    State* Transition::getSourceState() const {
         return sourceState;
     }
 
-    const State& Transition::getTargetState() const {
+    State* Transition::getTargetState() const {
         return targetState;
     }
  
@@ -71,7 +71,7 @@ const Transition& Transition::getTransitionBasedOnId() const {
 const std::string& Transition::DisplayTransition() const {
     static std::string result;
     std::ostringstream oss;
-    oss << "Transition from " << sourceState.getName().c_str() << " to " << targetState.getName().c_str() << "\n";
+    //oss << "Transition from " << sourceState.getName().c_str() << " to " << targetState.getName().c_str() << "\n";
     oss << "Condition: " << condition << "\n";
     oss << "Delay: " << delayMs << " ms\n";
     result = oss.str();
@@ -84,6 +84,20 @@ void Transition::setCondition(const std::string& condition) {
 }
 void Transition::setDelay(int delayMs) {
     this->delayMs = delayMs;
+}
+
+// V Transition.cpp
+
+// --- Implementation for getSourceStateId ---
+int Transition::getSourceStateId() const {
+    // Call getStateId() on the referenced source State object
+    return sourceState->getStateId();
+}
+
+// --- Implementation for getDestinationStateId ---
+int Transition::getDestinationStateId() const {
+    // Call getStateId() on the referenced target State object
+    return targetState->getStateId();
 }
 
  

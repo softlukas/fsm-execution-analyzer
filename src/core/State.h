@@ -8,6 +8,9 @@
 #include <QVariant>
 #include <map>
 #include <tuple>
+//#include "Machine.h"
+
+class Machine; 
 
 /**
  * @brief Represents a single state of the interpreted finite automaton.
@@ -50,29 +53,60 @@ public:
      */
     const std::string& getAction() const;
 
-    void updateTransitionPositions(QGraphicsScene* scene);
+    void updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup* stateGroup, Machine *machine);
 
 
-    void addIncomingTransitionGroup(QGraphicsItemGroup* transitionGroup, const QVariant& data1, const QVariant& data2) {
+    void addIncomingTransitionGroup(QGraphicsItemGroup* transitionGroup, const QPointF& data1, const QPointF& data2) {
         incomingTranstions.insert({transitionGroup->data(0).toInt(), std::make_tuple(transitionGroup, data1, data2)});
     }
 
-    void addOutgoingTransitionGroup(QGraphicsItemGroup* transitionGroup, const QVariant& data1, const QVariant& data2) {
+    void addOutgoingTransitionGroup(QGraphicsItemGroup* transitionGroup, const QPointF& data1, const QPointF& data2) {
         outgoingTransitions.insert({transitionGroup->data(0).toInt(), std::make_tuple(transitionGroup, data1, data2)});
     }
+
+    void setIncomingTransitionGroup(int transitionId, QGraphicsItemGroup* transitionGroup, const QPointF& data1, const QPointF& data2) {
+        //if (incomingTranstions.find(transitionId) != incomingTranstions.end()) {
+            incomingTranstions[transitionId] = std::make_tuple(transitionGroup, data1, data2);
+        //}
+    }
+
+    void setOutgoingTransitionGroup(int transitionId, QGraphicsItemGroup* transitionGroup, const QPointF& data1, const QPointF& data2) {
+        //if (outgoingTransitions.find(transitionId) != outgoingTransitions.end()) {
+            outgoingTransitions[transitionId] = std::make_tuple(transitionGroup, data1, data2);
+        //}
+    }
+
+    void printTransitions() const;
+
+    QPointF currentPos; 
 
     // Potentially other methods in the future...
     // E.g., for working with transitions, if you decide the state should know its transitions
 
 private:
+
+    // Metóda na aktualizáciu grafiky prichádzajúceho prechodu (volá sa na CIEĽOVOM stave)
+    void updateIncomingTransitionGraphic(int transitionId, QGraphicsItemGroup* newGroup, const QPointF& actualStart, const QPointF& actualEnd);
+
+    // Metóda na aktualizáciu grafiky odchádzajúceho prechodu (volá sa na ZDROJOVOM stave)
+    void updateOutgoingTransitionGraphic(int transitionId, QGraphicsItemGroup* newGroup, const QPointF& actualStart, const QPointF& actualEnd);
+
+    // Metóda na odstránenie grafiky prichádzajúceho prechodu (volá sa na CIEĽOVOM stave)
+    void removeIncomingTransitionGraphic(int transitionId);
+
+    // Metóda na odstránenie grafiky odchádzajúceho prechodu (volá sa na ZDROJOVOM stave)
+    void removeOutgoingTransitionGraphic(int transitionId);
+
+
     std::string stateName;  // State name
     std::string stateOutput; // Action assigned to the state (as a code string)
     const int stateId;
     bool isActive = false;
     //QGraphicsItemGroup* stateGroup = nullptr;
-    std::map<int, std::tuple<QGraphicsItemGroup*, QVariant, QVariant>> incomingTranstions;
-    std::map<int, std::tuple<QGraphicsItemGroup*, QVariant, QVariant>> outgoingTransitions;
+    std::map<int, std::tuple<QGraphicsItemGroup*, QPointF, QPointF>> incomingTranstions;
+    std::map<int, std::tuple<QGraphicsItemGroup*, QPointF, QPointF>> outgoingTransitions;
 
+    // Current position of the state in the scene
     //QGraphicsItemGroup * stateGroup = nullptr; // Pointer to the QGraphicsItemGroup representing the state in the scene
     // Potentially other member variables...
 };
