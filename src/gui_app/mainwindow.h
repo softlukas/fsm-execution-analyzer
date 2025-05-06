@@ -75,7 +75,7 @@ private slots:
     void on_terminateAutomatButton_clicked();
     void on_connectButton_clicked();
     void on_renameButton_clicked();
-    
+    void on_setInitialStateButton_clicked();
 
     QGraphicsItemGroup* drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene, QVariant *actualStartPos, QVariant *actualEndPos);
 
@@ -160,11 +160,13 @@ private:
     
     void bindGuiSocket();
 
+    void clearLayout(QLayout *layout);
     void clearVariableList();
     void clearInputList();
     void clearOutputList();   // ak používaš
     void redrawAutomatonFromModel();
     void populateUIFromModel();
+    void setInputFieldsEnabled(bool enabled);
 
     Ui::MainWindow *ui;    // Pointer to the UI elements defined in mainwindow.ui
     QGraphicsScene *scene; // The scene where graphics items will be drawn

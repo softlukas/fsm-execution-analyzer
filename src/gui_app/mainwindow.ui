@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1942</width>
-    <height>1116</height>
+    <width>1940</width>
+    <height>1106</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -55,75 +55,13 @@
      </property>
     </widget>
    </widget>
-   <widget class="QGroupBox" name="editInGroupBox">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>40</y>
-      <width>291</width>
-      <height>491</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>18</pointsize>
-     </font>
-    </property>
-    <property name="title">
-     <string>Edit Inputs</string>
-    </property>
-    <widget class="QPushButton" name="addInputButton">
-     <property name="geometry">
-      <rect>
-       <x>250</x>
-       <y>0</y>
-       <width>41</width>
-       <height>41</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>+</string>
-     </property>
-    </widget>
-   </widget>
-   <widget class="QGroupBox" name="editVarGroupBox">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>560</y>
-      <width>301</width>
-      <height>521</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>18</pointsize>
-     </font>
-    </property>
-    <property name="title">
-     <string>Edit variables</string>
-    </property>
-    <widget class="QPushButton" name="addVariableButton">
-     <property name="geometry">
-      <rect>
-       <x>260</x>
-       <y>0</y>
-       <width>41</width>
-       <height>41</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>+</string>
-     </property>
-    </widget>
-   </widget>
    <widget class="QGroupBox" name="menuGroupBox">
     <property name="geometry">
      <rect>
-      <x>340</x>
-      <y>40</y>
-      <width>441</width>
-      <height>1041</height>
+      <x>10</x>
+      <y>30</y>
+      <width>771</width>
+      <height>341</height>
      </rect>
     </property>
     <property name="font">
@@ -137,10 +75,10 @@
     <widget class="QPushButton" name="addStateButton">
      <property name="geometry">
       <rect>
-       <x>50</x>
+       <x>10</x>
        <y>60</y>
-       <width>331</width>
-       <height>81</height>
+       <width>241</width>
+       <height>71</height>
       </rect>
      </property>
      <property name="font">
@@ -155,10 +93,10 @@
     <widget class="QPushButton" name="addTransitionButton">
      <property name="geometry">
       <rect>
-       <x>50</x>
-       <y>160</y>
-       <width>331</width>
-       <height>81</height>
+       <x>260</x>
+       <y>60</y>
+       <width>241</width>
+       <height>71</height>
       </rect>
      </property>
      <property name="font">
@@ -173,10 +111,10 @@
     <widget class="QPushButton" name="saveJsonButton">
      <property name="geometry">
       <rect>
-       <x>50</x>
-       <y>270</y>
-       <width>331</width>
-       <height>81</height>
+       <x>10</x>
+       <y>150</y>
+       <width>241</width>
+       <height>71</height>
       </rect>
      </property>
      <property name="font">
@@ -191,10 +129,10 @@
     <widget class="QPushButton" name="loadJsonButton">
      <property name="geometry">
       <rect>
-       <x>50</x>
-       <y>380</y>
-       <width>331</width>
-       <height>81</height>
+       <x>260</x>
+       <y>150</y>
+       <width>241</width>
+       <height>71</height>
       </rect>
      </property>
      <property name="font">
@@ -209,10 +147,10 @@
     <widget class="QPushButton" name="runAutomatButton">
      <property name="geometry">
       <rect>
-       <x>50</x>
-       <y>490</y>
-       <width>331</width>
-       <height>81</height>
+       <x>10</x>
+       <y>240</y>
+       <width>241</width>
+       <height>71</height>
       </rect>
      </property>
      <property name="font">
@@ -227,10 +165,10 @@
     <widget class="QPushButton" name="terminateAutomatButton">
      <property name="geometry">
       <rect>
-       <x>50</x>
-       <y>590</y>
-       <width>331</width>
-       <height>81</height>
+       <x>260</x>
+       <y>240</y>
+       <width>241</width>
+       <height>71</height>
       </rect>
      </property>
      <property name="font">
@@ -245,10 +183,10 @@
     <widget class="QPushButton" name="connectButton">
      <property name="geometry">
       <rect>
-       <x>50</x>
-       <y>690</y>
-       <width>331</width>
-       <height>81</height>
+       <x>510</x>
+       <y>240</y>
+       <width>241</width>
+       <height>71</height>
       </rect>
      </property>
      <property name="font">
@@ -263,10 +201,10 @@
     <widget class="QPushButton" name="renameButton">
      <property name="geometry">
       <rect>
-       <x>50</x>
-       <y>790</y>
-       <width>331</width>
-       <height>81</height>
+       <x>510</x>
+       <y>60</y>
+       <width>241</width>
+       <height>71</height>
       </rect>
      </property>
      <property name="font">
@@ -276,6 +214,86 @@
      </property>
      <property name="text">
       <string>Rename Automat</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="setInitialStateButton">
+     <property name="geometry">
+      <rect>
+       <x>510</x>
+       <y>150</y>
+       <width>241</width>
+       <height>71</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>18</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>Set Initial State</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="editVarGroupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>680</y>
+      <width>771</width>
+      <height>401</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>18</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>Edit variables</string>
+    </property>
+    <widget class="QPushButton" name="addVariableButton">
+     <property name="geometry">
+      <rect>
+       <x>720</x>
+       <y>10</y>
+       <width>41</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>+</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="editInGroupBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>380</y>
+      <width>771</width>
+      <height>291</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>18</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>Edit Inputs</string>
+    </property>
+    <widget class="QPushButton" name="addInputButton">
+     <property name="geometry">
+      <rect>
+       <x>720</x>
+       <y>0</y>
+       <width>41</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>+</string>
      </property>
     </widget>
    </widget>

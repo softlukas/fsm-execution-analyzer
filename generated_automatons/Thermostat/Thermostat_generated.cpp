@@ -23,15 +23,17 @@
 // =====================================================
 
 // Automaton name constant, generated from JSON data.
-const std::string AUTOMATON_NAME = "{{ automaton_name }}";
+const std::string AUTOMATON_NAME = "Thermostat";
 
 // Enum defining the possible states of the automaton.
 // Includes a default NULL state and generated states.
 enum class State {
     STATE_NULL,
-{% for state in states %}
-    {{ state.enum_id }},
-{% endfor %}
+
+    STATE_HEATING,
+
+    STATE_OFF,
+
 };
 
 // Maps for converting between state names (strings) and State enum values.
@@ -41,9 +43,11 @@ std::map<State, std::string> stateEnumToName; // Map: State::STATE_ENUM_ID -> "S
 // --- Global Automaton Variables ---
 // Variables are declared directly using the type and name specified in the JSON/model.
 // Initial values are generated based on the type hint (e.g., quoted for strings).
-{% for var in variables %}
-{{ var.type }} {{ var.name }} = {{ var.initial_value_cpp }};
-{% endfor %}
+
+int max_heat_time = 10000;
+
+double setpoint = 20.0;
+
 
 // --- Runtime State Variables ---
 // Map to store the last known value received for each input channel.
@@ -105,38 +109,69 @@ void output(const std::string& output_name, const T& value) {
 
 // Functions corresponding to the actions defined for each state.
 // Function names are generated based on the sanitized state names.
-{% for state in states %}
-// Action function for state: {{ state.name }}
-void {{ state.func_id }}() {
-    std::cout << "[ACTION] Executing action for state {{ state.name }}" << std::endl;
+
+// Action function for state: Heating
+void action_HEATING() {
+    std::cout << "[ACTION] Executing action for state Heating" << std::endl;
     // User-defined action code:
-    {{ state.action }}
+    output("heater_state", 1); // 1 = On
 }
-{% endfor %}
+
+// Action function for state: Off
+void action_OFF() {
+    std::cout << "[ACTION] Executing action for state Off" << std::endl;
+    // User-defined action code:
+    output("heater_state", 0); // 0 = Off
+}
+
 
 
 // --- Guard Condition Checks ---
 // Functions to evaluate the guard conditions defined for transitions.
 // Function names include a unique index generated during JSON serialization.
-{% for trans in transitions %}
-  {% if trans.guard %}
-    // Guard function for transition #{{ trans.template_index0 }} (Source: {{trans.source}}, Target: {{trans.target}})
-    bool check_guard_{{ trans.template_index0 }}() {
+
+  
+    // Guard function for transition #0 (Source: Off, Target: Heating)
+    bool check_guard_0() {
     try {
          // User-defined guard condition code:
          // Uses original variable names and calls valueof("input_name") for inputs.
-        return ({{ trans.guard }});
+        return (atof(valueof("temp")) < setpoint);
     } catch (const std::exception& e) {
         // Basic error handling for exceptions during guard evaluation.
-        std::cerr << "[ERROR] Exception in guard_{{ trans.template_index0 }}: " << e.what() << std::endl;
+        std::cerr << "[ERROR] Exception in guard_0: " << e.what() << std::endl;
         return false;
     } catch (...) {
-        std::cerr << "[ERROR] Unknown exception in guard_{{ trans.template_index0 }}" << std::endl;
+        std::cerr << "[ERROR] Unknown exception in guard_0" << std::endl;
         return false;
     }
 }
-  {% endif %}
-{% endfor %}
+  
+
+  
+    // Guard function for transition #1 (Source: Heating, Target: Off)
+    bool check_guard_1() {
+    try {
+         // User-defined guard condition code:
+         // Uses original variable names and calls valueof("input_name") for inputs.
+        return (atof(valueof("temp")) >= setpoint);
+    } catch (const std::exception& e) {
+        // Basic error handling for exceptions during guard evaluation.
+        std::cerr << "[ERROR] Exception in guard_1: " << e.what() << std::endl;
+        return false;
+    } catch (...) {
+        std::cerr << "[ERROR] Unknown exception in guard_1" << std::endl;
+        return false;
+    }
+}
+  
+
+  
+
+  
+
+  
+
 
 // --- Core Automaton Logic (Callbacks & Processing) ---
 
@@ -159,22 +194,32 @@ void executeCurrentStateAction() {
 
     // Execute the specific action function based on the current state enum.
     switch (currentState) {
-        {% for state in states %}
-        case State::{{ state.enum_id }}: // Case for state: {{ state.name }}
-            {{ state.func_id }}();      // Call generated action function
+        
+        case State::STATE_HEATING: // Case for state: Heating
+            action_HEATING();      // Call generated action function
             break;
-        {% endfor %}
+        
+        case State::STATE_OFF: // Case for state: Off
+            action_OFF();      // Call generated action function
+            break;
+        
         case State::STATE_NULL: break; // Should not happen in normal operation
     }
 
     // After executing the action, send updates for all variables to the GUI.
-    {% for var in variables %}
+    
     { // Scope for temporary stringstream
         std::stringstream ss;
-        ss << {{ var.name }}; // Convert variable value to string
-        engine.sendVarUpdate("{{ var.name }}", ss.str()); // Send update
+        ss << max_heat_time; // Convert variable value to string
+        engine.sendVarUpdate("max_heat_time", ss.str()); // Send update
     } 
-    {% endfor %}
+    
+    { // Scope for temporary stringstream
+        std::stringstream ss;
+        ss << setpoint; // Convert variable value to string
+        engine.sendVarUpdate("setpoint", ss.str()); // Send update
+    } 
+    
 }
 
 // Performs the transition to the next state.
@@ -213,47 +258,63 @@ bool processTransitions(std::optional<std::pair<std::string, std::string>> event
         // This phase runs only if no external event is being processed in this call.
         if (!event) {
             switch(currentState) {
-                {% for state in states %}
-                // Check transitions originating from state: {{ state.name }}
-                case State::{{ state.enum_id }}: {
+                
+                // Check transitions originating from state: Heating
+                case State::STATE_HEATING: {
                     bool guard_ok; // Variable to store guard evaluation 
-                     {% for trans in transitions %}
-                        {% if trans.source == state.name and not trans.event %}
+                     
+                        
+                     
+                        
+                     
+                        
                             guard_ok = true; // Assume guard is true unless 
-                            {% if trans.guard and trans.guard != "" %}
-                                // Evaluate the guard condition if it exists
-                                guard_ok = check_guard_{{ trans.template_index0 }}();
-                            {% endif %}
+                            
                             if (guard_ok) {
                                 // Check if it's an immediate or delayed transition.
-                                {% if not trans.delay and not trans.delay_var_original %} // Immediate transition (no delay number, no delay variable).
-                                     next_state_candidate = State::{{ trans.target_enum_id }}; // Set target state.
-                                     immediate_transition_found_in_cycle = true;
-                                     goto end_switch_immediate_{{ state.enum_id }};
-                                {% else %} // Delayed transition.
+                                 // Delayed transition.
                                      long long delay_ms = 0;
                                      // Determine the delay value.
-                                     {% if trans.delay and trans.delay > 0 %}
-                                         // Use the numeric delay from JSON.
-                                        delay_ms = {{ trans.delay }};
-                                    {% else %}
-                                        {% if trans.delay_var_original %}
+                                     
+                                        
                                             // Use the delay variable.
-                                            try { delay_ms = static_cast<long long>({{ trans.delay_var_original }}); }
-                                            catch (...) { delay_ms = -1; std::cerr << "[ERROR] Delay variable '{{ trans.delay_var_original }}' invalid!" << std::endl; }
-                                        {% endif %}
-                                    {% endif %}
+                                            try { delay_ms = static_cast<long long>(max_heat_time); }
+                                            catch (...) { delay_ms = -1; std::cerr << "[ERROR] Delay variable 'max_heat_time' invalid!" << std::endl; }
+                                        
+                                    
                                      if (delay_ms >= 0) {
-                                         engine.scheduleTimer(delay_ms, stateEnumToName[State::{{ trans.target_enum_id }}]); // <<< Použi enum_id cieľa
+                                         engine.scheduleTimer(delay_ms, stateEnumToName[State::STATE_OFF]); // <<< Použi enum_id cieľa
                                      }
-                                {% endif %}
+                                
                             }
-                        {% endif %}
-                     {% endfor %}
-                     end_switch_immediate_{{ state.enum_id }}:;
+                        
+                     
+                        
+                     
+                        
+                     
+                     end_switch_immediate_STATE_HEATING:;
                     break;
                     }
-                {% endfor %}
+                
+                // Check transitions originating from state: Off
+                case State::STATE_OFF: {
+                    bool guard_ok; // Variable to store guard evaluation 
+                     
+                        
+                     
+                        
+                     
+                        
+                     
+                        
+                     
+                        
+                     
+                     end_switch_immediate_STATE_OFF:;
+                    break;
+                    }
+                
                 default: break;
             } 
             if (immediate_transition_found_in_cycle) { 
@@ -271,43 +332,105 @@ bool processTransitions(std::optional<std::pair<std::string, std::string>> event
             State next_state_event_candidate = currentState; // Potential target state.
             // Similar switch structure as Phase 1.
             switch(currentState){
-                 {% for state in states %}
-                 // Check transitions from state: {{ state.name }}
-                 case State::{{ state.enum_id }}:{
+                 
+                 // Check transitions from state: Heating
+                 case State::STATE_HEATING:{
                     bool guard_ok;
-                     {% for trans in transitions %}
-                            // Consider transition #{{ trans.template_index0 }}: {{trans.source}} -> {{trans.target}}
-                            {% if trans.source == state.name and trans.event %}
-                             if (eventName == "{{ trans.event }}") {
+                     
+                            // Consider transition #0: Off -> Heating
+                            
+                     
+                            // Consider transition #1: Heating -> Off
+                            
+                             if (eventName == "temp") {
                                 guard_ok = true; // Assume guard ok unless 
-                                {% if trans.guard and trans.guard != "" %} guard_ok = check_guard_{{ trans.template_index0 }}(); {% endif %}
+                                 guard_ok = check_guard_1(); 
                                 if(guard_ok) {
                                     // Check if immediate or delayed.
-                                    {% if not trans.delay and not trans.delay_var_original %} // Immediate event transition.
-                                        next_state_event_candidate = State::{{ trans.target_enum_id }}; // Set target state.
+                                     // Immediate event transition.
+                                        next_state_event_candidate = State::STATE_OFF; // Set target state.
                                         event_transition_found = true; // Mark event transition found.
-                                        goto end_switch_event_{{ state.enum_id }}; // Use goto to exit the inner loop and switch for this state.
-                                    {% else %} // Delayed event transition.
-                                        // Calculate delay (same logic as Phase 1).
-                                        long long delay_ms = 0;
-                                        {% if trans.delay and trans.delay > 0 %}
-                                            delay_ms = {{ trans.delay }};
-                                        {% else %}
-                                            {% if trans.delay_var_original %}
-                                                try { delay_ms = static_cast<long long>({{ trans.delay_var_original }}); }
-                                                catch (...) { delay_ms = -1; std::cerr << "[ERROR] Delay variable '{{ trans.delay_var_original }}' invalid!" << std::endl; }
-                                            {% endif %}
-                                        {% endif %}
-                                        if (delay_ms >= 0) engine.scheduleTimer(delay_ms, stateEnumToName[State::{{ trans.target_enum_id }}]);
-                                    {% endif %}
+                                        goto end_switch_event_STATE_HEATING; // Use goto to exit the inner loop and switch for this state.
+                                    
                                 }
                              }
-                        {% endif %}
-                     {% endfor %}
-                     end_switch_event_{{ state.enum_id }}:;
+                        
+                     
+                            // Consider transition #2: Heating -> Off
+                            
+                     
+                            // Consider transition #3: Off -> Off
+                            
+                     
+                            // Consider transition #4: Heating -> Heating
+                            
+                             if (eventName == "set_setpoint") {
+                                guard_ok = true; // Assume guard ok unless 
+                                
+                                if(guard_ok) {
+                                    // Check if immediate or delayed.
+                                     // Immediate event transition.
+                                        next_state_event_candidate = State::STATE_HEATING; // Set target state.
+                                        event_transition_found = true; // Mark event transition found.
+                                        goto end_switch_event_STATE_HEATING; // Use goto to exit the inner loop and switch for this state.
+                                    
+                                }
+                             }
+                        
+                     
+                     end_switch_event_STATE_HEATING:;
                     break;
                  }
-                 {% endfor %}
+                 
+                 // Check transitions from state: Off
+                 case State::STATE_OFF:{
+                    bool guard_ok;
+                     
+                            // Consider transition #0: Off -> Heating
+                            
+                             if (eventName == "temp") {
+                                guard_ok = true; // Assume guard ok unless 
+                                 guard_ok = check_guard_0(); 
+                                if(guard_ok) {
+                                    // Check if immediate or delayed.
+                                     // Immediate event transition.
+                                        next_state_event_candidate = State::STATE_HEATING; // Set target state.
+                                        event_transition_found = true; // Mark event transition found.
+                                        goto end_switch_event_STATE_OFF; // Use goto to exit the inner loop and switch for this state.
+                                    
+                                }
+                             }
+                        
+                     
+                            // Consider transition #1: Heating -> Off
+                            
+                     
+                            // Consider transition #2: Heating -> Off
+                            
+                     
+                            // Consider transition #3: Off -> Off
+                            
+                             if (eventName == "set_setpoint") {
+                                guard_ok = true; // Assume guard ok unless 
+                                
+                                if(guard_ok) {
+                                    // Check if immediate or delayed.
+                                     // Immediate event transition.
+                                        next_state_event_candidate = State::STATE_OFF; // Set target state.
+                                        event_transition_found = true; // Mark event transition found.
+                                        goto end_switch_event_STATE_OFF; // Use goto to exit the inner loop and switch for this state.
+                                    
+                                }
+                             }
+                        
+                     
+                            // Consider transition #4: Heating -> Heating
+                            
+                     
+                     end_switch_event_STATE_OFF:;
+                    break;
+                 }
+                 
                  default: break;
             }
             // If an immediate transition triggered by the event was found:
@@ -390,13 +513,19 @@ void handleStatusRequestCallback() {
     engine.sendStateUpdate(currentSName);
 
     // Send the current values of all variables.
-    {% for var in variables %}
+    
     {
         std::stringstream ss;
-        ss << {{ var.name }};
-        engine.sendVarUpdate("{{ var.name }}", ss.str());
+        ss << max_heat_time;
+        engine.sendVarUpdate("max_heat_time", ss.str());
     }
-    {% endfor %}
+    
+    {
+        std::stringstream ss;
+        ss << setpoint;
+        engine.sendVarUpdate("setpoint", ss.str());
+    }
+    
 
     // Optional: Send last known input/output values for a more complete status picture.
     /*
@@ -457,18 +586,21 @@ int main(int argc, char *argv[]) {
     // Populate maps for easy conversion between state names and enum values.
     stateNameToEnum["STATE_NULL"] = State::STATE_NULL; // Should not be used normally
     stateEnumToName[State::STATE_NULL] = "STATE_NULL";
-    {% for state in states %}
-    stateNameToEnum["{{ state.name }}"] = State::{{ state.enum_id }}; // Map name to enum
-    stateEnumToName[State::{{ state.enum_id }}] = "{{ state.name }}"; // Map enum to name
-    {% endfor %}
+    
+    stateNameToEnum["Heating"] = State::STATE_HEATING; // Map name to enum
+    stateEnumToName[State::STATE_HEATING] = "Heating"; // Map enum to name
+    
+    stateNameToEnum["Off"] = State::STATE_OFF; // Map name to enum
+    stateEnumToName[State::STATE_OFF] = "Off"; // Map enum to name
+    
 
     // --- Set Initial State ---
     // Set the currentState variable based on the initial state specified in the JSON.
-    currentState = State::{{ initial_state_enum_id }};
+    currentState = State::STATE_OFF;
     // Basic validation: Check if the generated initial state enum is valid.
-    if (currentState == State::STATE_NULL && "{{ initial_state_name }}" != "") {
-         std::cerr << "[ERROR] Initial state '{{ initial_state_name }}' issue!" << std::endl; return 1;
-    } else if ("{{ initial_state_name }}" == "") {
+    if (currentState == State::STATE_NULL && "Off" != "") {
+         std::cerr << "[ERROR] Initial state 'Off' issue!" << std::endl; return 1;
+    } else if ("Off" == "") {
          std::cerr << "[ERROR] No initial state defined!" << std::endl; return 1;
     }
 

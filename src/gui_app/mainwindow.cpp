@@ -47,15 +47,14 @@
 #include <QNetworkDatagram> // Alternatívny spôsob čítania od Qt 5.10+
 #include <QFileDialog> // Potrebný pre dialóg na výber súboru
 #include <QStandardPaths> // Pre získanie predvoleného adresára (napr. Dokumenty)
-
-
+#include <QLayout>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    setWindowTitle("IFA Automaton Tool (Step 3)");
+    setWindowTitle("Automat Creator");
     scene = new QGraphicsScene(this);
     scene->setSceneRect(0, 0, 2000, 1500); // <<< Nastav veľkú scénu (napr. 2000x1500 pixelov)
 
@@ -64,6 +63,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     if(gView) {
         gView->setScene(scene);
+        
         qDebug() << "Graphics scene created and assigned to graphicsView.";
         // --- Connect custom view's signal to our slot ---
         connect(gView, &GraphicsView::stateItemClicked, this, &MainWindow::handleStateClick);
@@ -74,25 +74,114 @@ MainWindow::MainWindow(QWidget *parent)
     if (gView) {
         gView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded); // Predvolené
         gView->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);   // Predvolené
+
+        
     }
     // Create a Machine object using the Machine constructor
-
-    std::string machineName = MainWindowUtils::ProccessOneArgumentDialog("Set automat name");
+    std::string machineName = "";
+    while (machineName.empty()) { // Opakuj, kým meno nie je zadané
+        machineName = MainWindowUtils::ProccessOneArgumentDialog("Set automat name");
+        if (machineName.empty()) {
+            QMessageBox::warning(this, "Name Required", "Automaton name cannot be empty. Please provide a name.");
+        }
+    }
+    
+    setInputFieldsEnabled(false); // Východzí stav je neaktívny
 
 
     machine = new Machine(machineName);
 
     
     qDebug() << "Machine object created successfully.";
-    // Set trackingOutputsGroupBox as invisible
 
 
-    std::string dummy1;
-    std::string dummy2;
+    // --- ZÍSKANIE PORTOV S VALIDÁCIOU ČÍSIEL ---
+    bool portsValid = false;
+    std::string guiPortStr = "9000"; // Predvolená hodnota
+    std::string automatonPortStr = "9001"; // Predvolená hodnota
+
+    while (!portsValid) {
+        std::string tempGuiPort = "";
+        std::string tempAutomatonPort = "";
+
+        // Zobraz dialóg (predvyplň posledné platné alebo predvolené hodnoty)
+        ProccessMultipleArgsInputEditDialog("ADD PORTS",
+                                            "Add port GUI (1024-65535):",
+                                            "Add port AUTOMAT (1024-65535):",
+                                            guiPortStr,         // Predvyplň poslednú/predvolenú hodnotu
+                                            automatonPortStr,   // Predvyplň poslednú/predvolenú hodnotu
+                                            &tempGuiPort,       // Výstup pre nový GUI port
+                                            &tempAutomatonPort);// Výstup pre nový Automat port
+
+        // Skontroluj, či užívateľ nezrušil dialóg (obe hodnoty by boli prázdne podľa ProccessMultipleArgs...)
+         if (tempGuiPort.empty() && tempAutomatonPort.empty()) {
+             // Ak chceme ukončiť aplikáciu pri zrušení portov, môžeme to urobiť tu
+             // napr. qApp->quit(); alebo vyhodiť výnimku, alebo nastaviť chybový stav
+              QMessageBox::critical(this, "Ports Required", "Valid port numbers are required to continue.");
+             // V tomto príklade budeme pokračovať v cykle a žiadať znova
+             continue; // Späť na začiatok cyklu while
+         }
 
 
-    ProccessMultipleArgsInputEditDialog("ADD PORTS", "Add port GUI", "Add port AUTOMAT",
-        dummy1, dummy2, &this->portGUI, &this->portAutomat);
+        // Validácia GUI Portu
+        bool guiPortOk = false;
+        int guiPortInt = -1;
+        try {
+            size_t processedChars = 0;
+            guiPortInt = std::stoi(tempGuiPort, &processedChars);
+            // Skontroluj, či bolo spracované celé číslo a či je v rozsahu
+            if (processedChars == tempGuiPort.length() && guiPortInt >= 1024 && guiPortInt <= 65535) {
+                guiPortOk = true;
+            }
+        } catch (const std::invalid_argument& e) {
+            // std::stoi vyhodí, ak to nie je číslo
+        } catch (const std::out_of_range& e) {
+            // std::stoi vyhodí, ak je číslo mimo rozsahu int
+        }
+
+        // Validácia Automaton Portu
+        bool automatonPortOk = false;
+        int automatonPortInt = -1;
+         try {
+            size_t processedChars = 0;
+            automatonPortInt = std::stoi(tempAutomatonPort, &processedChars);
+            if (processedChars == tempAutomatonPort.length() && automatonPortInt >= 1024 && automatonPortInt <= 65535) {
+                 // Dodatočná kontrola: Porty nesmú byť rovnaké
+                 if (automatonPortInt != guiPortInt) {
+                     automatonPortOk = true;
+                 }
+            }
+        } catch (const std::invalid_argument& e) {
+        } catch (const std::out_of_range& e) {
+        }
+
+        // Skontroluj výsledky validácie
+        if (guiPortOk && automatonPortOk) {
+            portsValid = true; // Všetko je v poriadku, ukonči cyklus
+            // Ulož platné hodnoty do členských premenných
+            this->portGUI = tempGuiPort;
+            this->portAutomat = tempAutomatonPort;
+            qInfo() << "Valid ports entered: GUI=" << QString::fromStdString(this->portGUI)
+                    << ", Automaton=" << QString::fromStdString(this->portAutomat);
+        } else {
+            // Zobraz chybovú správu
+            QString errorMsg = "Invalid input:\n";
+            if (!guiPortOk) {
+                errorMsg += "- GUI Port must be a number between 1024 and 65535.\n";
+            }
+            if (!automatonPortOk) {
+                 if (automatonPortInt == guiPortInt && guiPortOk) { // Špeciálny prípad rovnakých portov
+                      errorMsg += "- Automaton Port must be different from GUI Port.\n";
+                 } else {
+                      errorMsg += "- Automaton Port must be a number between 1024 and 65535.\n";
+                 }
+            }
+            QMessageBox::warning(this, "Invalid Ports", errorMsg);
+            // Ponechaj posledné platné/predvolené hodnoty v guiPortStr a automatonPortStr pre ďalšiu iteráciu
+            guiPortStr = tempGuiPort; // Ukáž užívateľovi, čo zadal nesprávne
+            automatonPortStr = tempAutomatonPort;
+        }
+    } // Koniec while (!portsValid)
 
     guiSocket_ = new QUdpSocket(this);
     connect(guiSocket_, &QUdpSocket::readyRead, this, &MainWindow::processPendingDatagrams);
@@ -105,6 +194,46 @@ MainWindow::~MainWindow() {
 }
 
 
+void MainWindow::on_setInitialStateButton_clicked() {    
+    qDebug() << "Run Automaton button clicked.";
+
+    if (!machine) {
+        QMessageBox::critical(this, "Error", "No automaton model loaded or created.");
+        return;
+    }
+
+    std::string automatonInitialStateName; // Premenovaná pre jasnosť
+    bool initialStateSet = false;
+
+    while (!initialStateSet) { // Opakuj, kým sa nepodarí nastaviť
+        automatonInitialStateName = MainWindowUtils::ProccessOneArgumentDialog("Enter automaton starting state name:");
+
+        if (automatonInitialStateName.empty()) {
+             // Používateľ stlačil Cancel v dialógu mena
+             QMessageBox::warning(this, "Cancelled", "Starting state selection cancelled.");
+             return; // Ukonči funkciu, ak používateľ zruší výber stavu
+        }
+
+        // Pokús sa nastaviť počiatočný stav v modeli
+        try {
+            machine->setInitialState(automatonInitialStateName);
+            qInfo() << "Initial state set to:" << QString::fromStdString(automatonInitialStateName);
+            initialStateSet = true; // Podarilo sa, ukonči cyklus
+
+        } catch (const std::runtime_error& e) {
+            // Zachyť konkrétnu výnimku z Machine::setInitialState
+            qWarning() << "Error setting initial state:" << e.what();
+            QMessageBox::warning(this, "Invalid State", QString("Could not set initial state:\n%1\nPlease enter a valid state name.").arg(e.what()));
+            // Cyklus while pobeží znova a opýta sa používateľa
+        } catch (const std::exception& e) {
+             // Zachyť iné neočakávané chyby
+             qCritical() << "Unexpected error setting initial state:" << e.what();
+             QMessageBox::critical(this, "Error", QString("An unexpected error occurred: %1").arg(e.what()));
+             return;
+        }
+    }
+
+}
 
 void MainWindow::on_runAutomatButton_clicked() {
 
@@ -115,18 +244,12 @@ void MainWindow::on_runAutomatButton_clicked() {
         QMessageBox::critical(this, "Error", "No automaton model loaded or created.");
         return;
     }
-    std::string automatonInitialState;
+    const State* automatonInitialState = machine->getInitialState();
 
-    
-    automatonInitialState = MainWindowUtils::ProccessOneArgumentDialog("Enter automaton starting state:");
-    if (automatonInitialState.empty()) {
-            QMessageBox::warning(this, "Cancelled", "Automaton name is required.");
-            return;
+    if (automatonInitialState == nullptr) {
+        QMessageBox::warning(this, "Cancelled", "Automaton Initial State Is Not Set.");
+        return;
     }
-    // Tu by si mal pravdepodobne aktualizovať aj názov v `machine` objekte, ak má metódu setName()
-    // machine->setName(automatonInitialState);
-    machine->setInitialState(automatonInitialState);
-    qDebug() << "Using entered automaton name:" << QString::fromStdString(automatonInitialState);
     
 
     QString automatonName = QString::fromStdString(machine->getName());
@@ -280,7 +403,7 @@ void MainWindow::on_runAutomatButton_clicked() {
     if (QProcess::startDetached(executablePath, automatonArgs, targetAutomatonDir, &pid)) { // Štvrtý argument prijme PID
         qInfo() << "Automaton process" << automatonName << "started successfully (detached) with PID:" << pid;
         QMessageBox::information(this, "Started", "Automaton '" + automatonName + "' started (PID: " + QString::number(pid) + ").\nListen Port: " + QString::number(std::stoi(portAutomat)) + "\nGUI Port: " + QString::number(std::stoi(portGUI)));
-
+        setInputFieldsEnabled(true);
         // Ulož PID do členskej premennej (ak ju máš)
         //currentAutomatonPid_ = pid; // Predpokladá, že máš premennú `qint64 currentAutomatonPid_ = 0;` v mainwindow.h
 
@@ -292,6 +415,7 @@ void MainWindow::on_runAutomatButton_clicked() {
     } else {
         qCritical() << "Failed to start detached automaton process.";
         QMessageBox::critical(this, "Process Error", "Could not start the automaton process.");
+        setInputFieldsEnabled(false);
         // ui->statusbar->showMessage("Failed to start automaton!", 0);
     }
 
@@ -366,7 +490,7 @@ void MainWindow::processPendingDatagrams()
                 // ui->statusbar->showMessage("Connected to: " + connectedAutomatonName, 0);
 
                 // Clear scene (should be clear already, but just in case)
-                /*
+                
                 scene->clear();
                 objectStateId = 0; // Reset counters if needed
                 objectTransitionId = 0;
@@ -375,16 +499,9 @@ void MainWindow::processPendingDatagrams()
                 redrawAutomatonFromModel();
 
                 // Populate UI lists (variables, inputs, outputs)
-                populateUIFromModel();
-
-                // Enable interaction buttons
-                // TODO: ui->sendInputButton->setEnabled(true);
-                ui->terminateAutomatButton->setEnabled(true); // Example
-                ui->editFieldsButton->setEnabled(true); // Allow editing fields
-
-                // The subsequent STATE, VAR messages in this datagram burst
-                // will now update the newly loaded/drawn elements.
-                */
+                populateUIFromModel();   
+                
+                setInputFieldsEnabled(true);
 
             } else {
                 // Received NAME unexpectedly (already connected?) - maybe just log
@@ -492,6 +609,7 @@ void MainWindow::processPendingDatagrams()
             qInfo() << "Automaton is TERMINATING.";
             // TODO: Aktualizuj status v GUI, zablokuj tlačidlá
             QMessageBox::information(this, "Automaton", "Automaton terminating...");
+            setInputFieldsEnabled(false);
             // ui->sendInputButton->setEnabled(false);
             // ui->getStatusButton->setEnabled(false);
             // Ak si manažoval QProcess, tu by si mohol čakať na jeho dokončenie alebo ho odpojiť
@@ -747,7 +865,11 @@ void MainWindow::on_saveJsonButton_clicked() {
 
 void MainWindow::on_loadJsonButton_clicked() {
     qDebug() << "Load JSON button clicked.";
+    GraphicsView* gView = ui->graphicsView; // Use the correct type
 
+    if(gView) {
+        gView->ensureVisible(QRectF(0, 0, 1, 1), 0, 0);
+    }
     // 1. Priprav predvolenú cestu (napr. adresár projektu alebo posledný použitý)
     // Verzia pre adresár projektu:
     QString appDirPath = QCoreApplication::applicationDirPath();
@@ -756,7 +878,7 @@ void MainWindow::on_loadJsonButton_clicked() {
     buildSubDir.cdUp(); // Do koreňa projektu
     buildSubDir.cdUp(); // Do koreňa projektu
     QString projectPath = buildSubDir.absolutePath();
-    QString defaultDir = projectPath + "/generated_automatons"; // Alebo /examples
+    QString defaultDir = projectPath; // Alebo /examples
 
     // Alternatíva: Posledný použitý adresár alebo Dokumenty
     // QString defaultDir = lastUsedLoadPath.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) : lastUsedLoadPath;
@@ -793,9 +915,10 @@ void MainWindow::on_loadJsonButton_clicked() {
     scene->clear(); // Vyčisti grafickú scénu
     // TODO: Vyčisti zoznamy premenných, vstupov, výstupov (podobne ako v populateUIFromModel)
     //       Môžeš vytvoriť pomocnú funkciu clearUILists()
-    clearVariableList(); // Predpokladané pomocné funkcie
-    clearInputList();
-    clearOutputList();
+    
+    //clearVariableList(); // Predpokladané pomocné funkcie
+    //clearInputList();
+    //clearOutputList();
 
 
     // Vymaž starý objekt Machine, ak existoval
@@ -807,6 +930,7 @@ void MainWindow::on_loadJsonButton_clicked() {
     // Prevezmi vlastníctvo nového objektu
     machine = loadedMachine.release();
     qDebug() << "Took ownership of the newly loaded machine object.";
+    
 
 
     // Aktualizuj interné premenné GUI (porty atď.), ak je to potrebné
@@ -818,6 +942,8 @@ void MainWindow::on_loadJsonButton_clicked() {
     qDebug() << "Redrawing automaton and populating UI from the new model...";
     redrawAutomatonFromModel();
     populateUIFromModel();
+
+    setInputFieldsEnabled(false);
 
     // Metóda 1: Priame nastavenie viditeľnosti (odporúčané)
 
@@ -966,34 +1092,66 @@ void MainWindow::redrawAutomatonFromModel() {
     }
 
     qDebug() << "Finished redrawing automaton.";
-    // Scéna by sa mala automaticky prekresliť, keď sa do nej pridajú itemy
+    
+    GraphicsView* gView = ui->graphicsView; // Use the correct type
+
+    if(gView) {
+        gView->ensureVisible(QRectF(0, 0, 1, 1), 0, 0);
+    }
 }
 
-// Pomocné funkcie na vyčistenie UI (treba ich implementovať alebo vložiť logiku priamo)
-void MainWindow::clearVariableList() {
-     qDebug() << "Clearing Variable List UI";
-     if (ui->editVarGroupBox->layout()) {
-        QLayoutItem* item;
-        // Odstraňujeme od konca, aby sme nenarušili indexy pri odstraňovaní
-        while ((item = ui->editVarGroupBox->layout()->takeAt(ui->editVarGroupBox->layout()->count() - 1)) != nullptr) {
-            if (item->widget()) {
-                delete item->widget(); // Odstráni widget (QLabel, QLineEdit, QPushButton)
-            } else if (item->layout()) {
-                 // Ak máme layout v layoute (napr. QHBoxLayout pre riadok)
-                 QLayout* rowLayout = item->layout();
-                 QLayoutItem* childItem;
-                 while((childItem = rowLayout->takeAt(0)) != nullptr) {
-                     delete childItem->widget(); // Odstráni widgety v riadku
-                     delete childItem;
-                 }
-                 delete rowLayout; // Odstráni samotný layout riadku
-            }
-            delete item; // Odstráni položku z hlavného layoutu
-        }
-        // Voliteľné: Odstráň stretch, ak ho pridávaš na koniec
-        // if (ui->editVarGroupBox->layout()->count() > 0 && ui->editVarGroupBox->layout()->itemAt(0)->spacerItem()) {
-        //     delete ui->editVarGroupBox->layout()->takeAt(0);
+void MainWindow::setInputFieldsEnabled(bool enabled) {
+    qDebug() << "Setting input fields enabled state to:" << enabled;
+    // Nájdi group box
+    QGroupBox* groupBox = ui->editInGroupBox;
+    if (!groupBox) {
+        qWarning() << "setInputFieldsEnabled: editInGroupBox not found.";
+        return;
+    }
+
+    // Nájdi všetky QLineEdit vnútri group boxu
+    QList<QLineEdit*> inputEdits = groupBox->findChildren<QLineEdit*>();
+
+    for (QLineEdit* edit : inputEdits) {
+        edit->setEnabled(enabled);
+        // Prípadne uprav štýl, ak si použil setReadOnly a setStyleSheet
+        // if (enabled) {
+        //     edit->setReadOnly(false);
+        //     edit->setStyleSheet(""); // Reset štýlu
+        // } else {
+        //     edit->setReadOnly(true);
+        //     edit->setStyleSheet("background-color: #f0f0f0;");
         // }
+    }
+    qDebug() << "Updated enabled state for" << inputEdits.count() << "input fields.";
+}
+
+// POMOCNÁ funkcia na rekurzívne čistenie layoutov - BEZPEČNEJŠIA VERZIA
+void MainWindow::clearLayout(QLayout* layout) {
+    if (!layout) return;
+    QLayoutItem* item;
+    while ((item = layout->takeAt(0)) != nullptr) {
+        // Odpojiť všetky signály widgetu
+        if (QWidget* widget = item->widget()) {
+            widget->disconnect(); // <<< DÔLEŽITÉ
+            widget->deleteLater();
+        }
+        else if (QLayout* subLayout = item->layout()) {
+            clearLayout(subLayout);
+            delete subLayout;
+        }
+    }
+    qDebug() << "Layout cleared (items removed/deleted).";
+}
+
+// Upravená clearVariableList, ktorá volá pomocnú funkciu
+void MainWindow::clearVariableList() {
+    qDebug() << "Clearing Variable List UI";
+    if (QLayout* layout = ui->editVarGroupBox->layout()) {
+         qDebug() << "Layout found, calling clearLayout...";
+        clearLayout(layout); // Zavolaj bezpečnú pomocnú funkciu
+    } else {
+         qDebug() << "No layout found for editVarGroupBox.";
     }
 }
 
@@ -1007,28 +1165,30 @@ void MainWindow::populateUIFromModel() {
 
     // --- Clear existing UI lists FIRST ---
     // (Assuming you have implemented these as shown previously)
-    clearVariableList();
-    clearInputList();
-    clearOutputList();
-    qDebug() << "Cleared existing UI lists.";
 
     // --- 2. Populate Variables ---
     qDebug() << "Populating Variables...";
     const auto& variablesMap = machine->getVariables();
+    if (!variablesMap.empty()) clearVariableList();
+    qDebug() << "0";
     for (const auto& pair : variablesMap) {
         const Variable* var = pair.second.get(); // Get raw pointer from unique_ptr
+        qDebug() << "1";
         qDebug() << " Adding variable to UI:" << QString::fromStdString(var->getName());
+        qDebug() << "2";
         // Call your existing function to add the row to the UI
         addVarRowToGUI(var->getName(), var->getTypeHint(), var->getValueAsString());
+        qDebug() << "3";
     }
-    // Show/hide the group box based on whether variables exist
-    ui->editVarGroupBox->setVisible(!variablesMap.empty());
-    qDebug() << "Finished populating variables. Count:" << variablesMap.size() << "Visible:" << ui->editVarGroupBox->isVisible();
+
+    qDebug() << "4";
+
 
 
     // --- 3. Populate Inputs ---
     qDebug() << "Populating Inputs...";
     const auto& inputsMap = machine->getInputs();
+    if (!inputsMap.empty()) clearInputList();
     for (const auto& pair : inputsMap) {
          const Input* input = pair.second.get();
          qDebug() << " Adding input to UI:" << QString::fromStdString(input->getName());
@@ -1041,14 +1201,13 @@ void MainWindow::populateUIFromModel() {
              le->setText(QString::fromStdString(input->getLastValue().value_or("")));
          }
     }
-    // Show/hide the group box
-    ui->editInGroupBox->setVisible(!inputsMap.empty());
-     qDebug() << "Finished populating inputs. Count:" << inputsMap.size() << "Visible:" << ui->editInGroupBox->isVisible();
+
 
 
     // --- 4. Populate Outputs ---
     qDebug() << "Populating Outputs...";
     const auto& outputsMap = machine->getOutputs();
+    if (!outputsMap.empty()) clearOutputList();
     QGroupBox *groupBox = ui->trackingOutputsGroupBox; // Get the target group box
     if(groupBox) {
         // Ensure layout exists (get or create)
@@ -1114,56 +1273,33 @@ void MainWindow::populateUIFromModel() {
 
         } // End for loop over outputs
 
-        // Show/hide the group box
-        groupBox->setVisible(!outputsMap.empty());
-         qDebug() << "Finished populating outputs. Count:" << outputsMap.size() << "Visible:" << groupBox->isVisible();
     } else {
         qWarning() << "Cannot populate outputs: ui->trackingOutputsGroupBox is null.";
     }
      qDebug() << "Finished populateUIFromModel.";
 }
 
+// Podobne uprav aj clearInputList a clearOutputList, aby volali clearLayout
 void MainWindow::clearInputList() {
-     qDebug() << "Clearing Input List UI";
-    // Podobná logika ako pre clearVariableList, len pre ui->editInGroupBox
-     if (ui->editInGroupBox->layout()) {
-         QLayoutItem* item;
-         while ((item = ui->editInGroupBox->layout()->takeAt(ui->editInGroupBox->layout()->count() - 1)) != nullptr) {
-             // ... (rovnaká logika na odstránenie widgetov a layoutov) ...
-             if (item->widget()) { delete item->widget(); }
-             else if (item->layout()) {
-                 QLayout* rowLayout = item->layout();
-                 QLayoutItem* childItem;
-                 while((childItem = rowLayout->takeAt(0)) != nullptr) { delete childItem->widget(); delete childItem; }
-                 delete rowLayout;
-             }
-             delete item;
-         }
-     }
+    qDebug() << "Clearing Input List UI";
+    if (QLayout* layout = ui->editInGroupBox->layout()) {
+        qDebug() << "Layout found, calling clearLayout...";
+        clearLayout(layout);
+    } else {
+        qDebug() << "No layout found for editInGroupBox.";
+    }
 }
 
 void MainWindow::clearOutputList() {
-     qDebug() << "Clearing Output List UI";
-     // Podobná logika ako pre clearVariableList, len pre ui->trackingOutputsGroupBox
-    if (ui->trackingOutputsGroupBox->layout()) {
-         QLayoutItem* item;
-         while ((item = ui->trackingOutputsGroupBox->layout()->takeAt(ui->trackingOutputsGroupBox->layout()->count() - 1)) != nullptr) {
-             // ... (rovnaká logika na odstránenie widgetov a layoutov) ...
-              if (item->widget()) { delete item->widget(); }
-              else if (item->layout()) { // Ak sme použili QHBoxLayout pre QLabel + delete button
-                 QLayout* rowLayout = item->layout();
-                 QLayoutItem* childItem;
-                 while((childItem = rowLayout->takeAt(0)) != nullptr) { delete childItem->widget(); delete childItem; }
-                 delete rowLayout;
-             } else if (item->spacerItem()) {
-                  // Ak je tam stretch, odstráň ho tiež
-             }
-             delete item;
-         }
-         // Ak máš stretch na konci, môžeš ho pridať späť, ak chceš
-         // QVBoxLayout* layout = qobject_cast<QVBoxLayout*>(ui->trackingOutputsGroupBox->layout());
-         // if (layout) layout->addStretch();
-     }
+    qDebug() << "Clearing Output List UI";
+   if (QLayout* layout = ui->trackingOutputsGroupBox->layout()) {
+        qDebug() << "Layout found, calling clearLayout...";
+        clearLayout(layout);
+        // Ak si pridával stretch, musíš ho pridať znova, ak chceš
+        // layout->addStretch();
+    } else {
+         qDebug() << "No layout found for trackingOutputsGroupBox.";
+    }
 }
 
 
@@ -1423,6 +1559,8 @@ void MainWindow::addInputRowToGUI(const std::string& name) {
     deleteButton->setToolTip("Delete this input");
     deleteButton->setObjectName(baseObjectName + "_deleteBtn");
 
+    valueEdit->setEnabled(false);
+
     // Connect the delete button's clicked signal to a lambda function
     connect(deleteButton, &QPushButton::clicked, this, [this, rowLayout, name]() {
         // Remove the row from the layout
@@ -1598,9 +1736,11 @@ void MainWindow::on_addOutputButton_clicked() {
     connect(deleteButton, &QPushButton::clicked, this, [this, layout, rowLayout, newLabel, deleteButton, outputName]() {
         // Remove the row layout and its widgets
         layout->removeItem(rowLayout);
-        delete newLabel;
-        delete deleteButton;
-        delete rowLayout;
+        while(QLayoutItem *child = rowLayout->takeAt(0)) {
+            if (child->widget()) child->widget()->deleteLater();
+            else if (child->layout()) child->layout()->deleteLater();
+        }
+        rowLayout->deleteLater(); // Alebo necháš Qt, keď zanikne rodič.
 
         // Remove the output from the machine
         machine->removeOutput(outputName);
@@ -1749,6 +1889,19 @@ void MainWindow::on_addStateButton_clicked() {
         delete group;
         return;
     }
+
+    GraphicsView* gView = ui->graphicsView;
+    if (gView) {
+        // Metóda 1: ensureVisible - jednoduchšie
+        // Použi sceneBoundingRect() skupiny, aby si bol istý, že vidíš celý prvok
+         gView->ensureVisible(group->sceneBoundingRect(), 50, 50); // 50px okraj okolo prvku
+         qDebug() << "Ensured newly added state is visible.";
+
+        // Metóda 2: centerOn - vycentruje pohľad na stred prvku
+        // gView->centerOn(group->sceneBoundingRect().center());
+        // qDebug() << "Centered view on newly added state.";
+    }
+
     qDebug() << "Group (Ellipse + Name) added to scene for state:" << stateName;
 }
 

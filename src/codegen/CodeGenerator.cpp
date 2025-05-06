@@ -54,10 +54,10 @@ std::string CodeGenerator::generate(const Machine& machine, const std::string& j
         std::cout << "[CodeGen] Successfully loaded and parsed JSON from: " << jsonFilePath << std::endl;
 
     } catch (const json::parse_error& e) {
-=        std::cerr << "[CodeGen] Error parsing JSON file '" << jsonFilePath << "': " << e.what() << std::endl;
+        std::cerr << "[CodeGen] Error parsing JSON file '" << jsonFilePath << "': " << e.what() << std::endl;
         throw GenerationError(std::string("JSON parsing failed: ") + e.what());
     } catch (const std::exception& e) {
-=        std::cerr << "[CodeGen] Error reading JSON file '" << jsonFilePath << "': " << e.what() << std::endl;
+        std::cerr << "[CodeGen] Error reading JSON file '" << jsonFilePath << "': " << e.what() << std::endl;
         throw GenerationError(std::string("JSON file reading failed: ") + e.what());
     }
 

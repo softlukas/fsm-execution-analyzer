@@ -1,0 +1,102 @@
+{
+  "automaton_name": "Counter",
+  "initial_state_enum_id": "STATE_IDLE",
+  "initial_state_name": "Idle",
+  "inputs": [
+    "increment",
+    "reset"
+  ],
+  "outputs": [
+    "count_out",
+    "status_out"
+  ],
+  "states": [
+    {
+      "action": "counter = counter + 1; output(\"count_out\", counter); output(\"status_out\", \"Counting\");",
+      "enum_id": "STATE_COUNTING",
+      "func_id": "action_COUNTING",
+      "initial": false,
+      "name": "Counting"
+    },
+    {
+      "action": "counter = 0; output(\"count_out\", counter); output(\"status_out\", \"Reset\");",
+      "enum_id": "STATE_IDLE",
+      "func_id": "action_IDLE",
+      "initial": true,
+      "name": "Idle"
+    },
+    {
+      "action": "output(\"status_out\", \"Limit Reached\");",
+      "enum_id": "STATE_LIMIT_REACHED",
+      "func_id": "action_LIMIT_REACHED",
+      "initial": false,
+      "name": "Limit_Reached"
+    }
+  ],
+  "transitions": [
+    {
+      "delay": null,
+      "delay_var_original": null,
+      "event": "increment",
+      "guard": "counter < limit",
+      "source": "Idle",
+      "target": "Counting",
+      "target_enum_id": "STATE_COUNTING",
+      "template_index0": 0
+    },
+    {
+      "delay": null,
+      "delay_var_original": null,
+      "event": "increment",
+      "guard": "counter < limit",
+      "source": "Counting",
+      "target": "Counting",
+      "target_enum_id": "STATE_COUNTING",
+      "template_index0": 1
+    },
+    {
+      "delay": null,
+      "delay_var_original": null,
+      "event": "increment",
+      "guard": "counter >= limit",
+      "source": "Counting",
+      "target": "Limit_Reached",
+      "target_enum_id": "STATE_LIMIT_REACHED",
+      "template_index0": 2
+    },
+    {
+      "delay": null,
+      "delay_var_original": null,
+      "event": "reset",
+      "guard": null,
+      "source": "Counting",
+      "target": "Idle",
+      "target_enum_id": "STATE_IDLE",
+      "template_index0": 3
+    },
+    {
+      "delay": null,
+      "delay_var_original": null,
+      "event": "reset",
+      "guard": null,
+      "source": "Limit_Reached",
+      "target": "Idle",
+      "target_enum_id": "STATE_IDLE",
+      "template_index0": 4
+    }
+  ],
+  "variables": [
+    {
+      "initial_value": "0",
+      "initial_value_cpp": "0",
+      "name": "counter",
+      "type": "int"
+    },
+    {
+      "initial_value": "5",
+      "initial_value_cpp": "5",
+      "name": "limit",
+      "type": "int"
+    }
+  ]
+}

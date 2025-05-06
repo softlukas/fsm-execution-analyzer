@@ -23,15 +23,17 @@
 // =====================================================
 
 // Automaton name constant, generated from JSON data.
-const std::string AUTOMATON_NAME = "{{ automaton_name }}";
+const std::string AUTOMATON_NAME = "Blinker";
 
 // Enum defining the possible states of the automaton.
 // Includes a default NULL state and generated states.
 enum class State {
     STATE_NULL,
-{% for state in states %}
-    {{ state.enum_id }},
-{% endfor %}
+
+    STATE_LED_OFF,
+
+    STATE_LED_ON,
+
 };
 
 // Maps for converting between state names (strings) and State enum values.
@@ -41,9 +43,7 @@ std::map<State, std::string> stateEnumToName; // Map: State::STATE_ENUM_ID -> "S
 // --- Global Automaton Variables ---
 // Variables are declared directly using the type and name specified in the JSON/model.
 // Initial values are generated based on the type hint (e.g., quoted for strings).
-{% for var in variables %}
-{{ var.type }} {{ var.name }} = {{ var.initial_value_cpp }};
-{% endfor %}
+
 
 // --- Runtime State Variables ---
 // Map to store the last known value received for each input channel.
@@ -105,38 +105,31 @@ void output(const std::string& output_name, const T& value) {
 
 // Functions corresponding to the actions defined for each state.
 // Function names are generated based on the sanitized state names.
-{% for state in states %}
-// Action function for state: {{ state.name }}
-void {{ state.func_id }}() {
-    std::cout << "[ACTION] Executing action for state {{ state.name }}" << std::endl;
+
+// Action function for state: Led_Off
+void action_LED_OFF() {
+    std::cout << "[ACTION] Executing action for state Led_Off" << std::endl;
     // User-defined action code:
-    {{ state.action }}
+    output("led", 0);
 }
-{% endfor %}
+
+// Action function for state: Led_On
+void action_LED_ON() {
+    std::cout << "[ACTION] Executing action for state Led_On" << std::endl;
+    // User-defined action code:
+    output("led", 1);
+}
+
 
 
 // --- Guard Condition Checks ---
 // Functions to evaluate the guard conditions defined for transitions.
 // Function names include a unique index generated during JSON serialization.
-{% for trans in transitions %}
-  {% if trans.guard %}
-    // Guard function for transition #{{ trans.template_index0 }} (Source: {{trans.source}}, Target: {{trans.target}})
-    bool check_guard_{{ trans.template_index0 }}() {
-    try {
-         // User-defined guard condition code:
-         // Uses original variable names and calls valueof("input_name") for inputs.
-        return ({{ trans.guard }});
-    } catch (const std::exception& e) {
-        // Basic error handling for exceptions during guard evaluation.
-        std::cerr << "[ERROR] Exception in guard_{{ trans.template_index0 }}: " << e.what() << std::endl;
-        return false;
-    } catch (...) {
-        std::cerr << "[ERROR] Unknown exception in guard_{{ trans.template_index0 }}" << std::endl;
-        return false;
-    }
-}
-  {% endif %}
-{% endfor %}
+
+  
+
+  
+
 
 // --- Core Automaton Logic (Callbacks & Processing) ---
 
@@ -159,22 +152,20 @@ void executeCurrentStateAction() {
 
     // Execute the specific action function based on the current state enum.
     switch (currentState) {
-        {% for state in states %}
-        case State::{{ state.enum_id }}: // Case for state: {{ state.name }}
-            {{ state.func_id }}();      // Call generated action function
+        
+        case State::STATE_LED_OFF: // Case for state: Led_Off
+            action_LED_OFF();      // Call generated action function
             break;
-        {% endfor %}
+        
+        case State::STATE_LED_ON: // Case for state: Led_On
+            action_LED_ON();      // Call generated action function
+            break;
+        
         case State::STATE_NULL: break; // Should not happen in normal operation
     }
 
     // After executing the action, send updates for all variables to the GUI.
-    {% for var in variables %}
-    { // Scope for temporary stringstream
-        std::stringstream ss;
-        ss << {{ var.name }}; // Convert variable value to string
-        engine.sendVarUpdate("{{ var.name }}", ss.str()); // Send update
-    } 
-    {% endfor %}
+    
 }
 
 // Performs the transition to the next state.
@@ -213,47 +204,65 @@ bool processTransitions(std::optional<std::pair<std::string, std::string>> event
         // This phase runs only if no external event is being processed in this call.
         if (!event) {
             switch(currentState) {
-                {% for state in states %}
-                // Check transitions originating from state: {{ state.name }}
-                case State::{{ state.enum_id }}: {
+                
+                // Check transitions originating from state: Led_Off
+                case State::STATE_LED_OFF: {
                     bool guard_ok; // Variable to store guard evaluation 
-                     {% for trans in transitions %}
-                        {% if trans.source == state.name and not trans.event %}
+                     
+                        
                             guard_ok = true; // Assume guard is true unless 
-                            {% if trans.guard and trans.guard != "" %}
-                                // Evaluate the guard condition if it exists
-                                guard_ok = check_guard_{{ trans.template_index0 }}();
-                            {% endif %}
+                            
                             if (guard_ok) {
                                 // Check if it's an immediate or delayed transition.
-                                {% if not trans.delay and not trans.delay_var_original %} // Immediate transition (no delay number, no delay variable).
-                                     next_state_candidate = State::{{ trans.target_enum_id }}; // Set target state.
-                                     immediate_transition_found_in_cycle = true;
-                                     goto end_switch_immediate_{{ state.enum_id }};
-                                {% else %} // Delayed transition.
+                                 // Delayed transition.
                                      long long delay_ms = 0;
                                      // Determine the delay value.
-                                     {% if trans.delay and trans.delay > 0 %}
+                                     
                                          // Use the numeric delay from JSON.
-                                        delay_ms = {{ trans.delay }};
-                                    {% else %}
-                                        {% if trans.delay_var_original %}
-                                            // Use the delay variable.
-                                            try { delay_ms = static_cast<long long>({{ trans.delay_var_original }}); }
-                                            catch (...) { delay_ms = -1; std::cerr << "[ERROR] Delay variable '{{ trans.delay_var_original }}' invalid!" << std::endl; }
-                                        {% endif %}
-                                    {% endif %}
+                                        delay_ms = 1000;
+                                    
                                      if (delay_ms >= 0) {
-                                         engine.scheduleTimer(delay_ms, stateEnumToName[State::{{ trans.target_enum_id }}]); // <<< Použi enum_id cieľa
+                                         engine.scheduleTimer(delay_ms, stateEnumToName[State::STATE_LED_ON]); // <<< Použi enum_id cieľa
                                      }
-                                {% endif %}
+                                
                             }
-                        {% endif %}
-                     {% endfor %}
-                     end_switch_immediate_{{ state.enum_id }}:;
+                        
+                     
+                        
+                     
+                     end_switch_immediate_STATE_LED_OFF:;
                     break;
                     }
-                {% endfor %}
+                
+                // Check transitions originating from state: Led_On
+                case State::STATE_LED_ON: {
+                    bool guard_ok; // Variable to store guard evaluation 
+                     
+                        
+                     
+                        
+                            guard_ok = true; // Assume guard is true unless 
+                            
+                            if (guard_ok) {
+                                // Check if it's an immediate or delayed transition.
+                                 // Delayed transition.
+                                     long long delay_ms = 0;
+                                     // Determine the delay value.
+                                     
+                                         // Use the numeric delay from JSON.
+                                        delay_ms = 1000;
+                                    
+                                     if (delay_ms >= 0) {
+                                         engine.scheduleTimer(delay_ms, stateEnumToName[State::STATE_LED_OFF]); // <<< Použi enum_id cieľa
+                                     }
+                                
+                            }
+                        
+                     
+                     end_switch_immediate_STATE_LED_ON:;
+                    break;
+                    }
+                
                 default: break;
             } 
             if (immediate_transition_found_in_cycle) { 
@@ -271,43 +280,35 @@ bool processTransitions(std::optional<std::pair<std::string, std::string>> event
             State next_state_event_candidate = currentState; // Potential target state.
             // Similar switch structure as Phase 1.
             switch(currentState){
-                 {% for state in states %}
-                 // Check transitions from state: {{ state.name }}
-                 case State::{{ state.enum_id }}:{
+                 
+                 // Check transitions from state: Led_Off
+                 case State::STATE_LED_OFF:{
                     bool guard_ok;
-                     {% for trans in transitions %}
-                            // Consider transition #{{ trans.template_index0 }}: {{trans.source}} -> {{trans.target}}
-                            {% if trans.source == state.name and trans.event %}
-                             if (eventName == "{{ trans.event }}") {
-                                guard_ok = true; // Assume guard ok unless 
-                                {% if trans.guard and trans.guard != "" %} guard_ok = check_guard_{{ trans.template_index0 }}(); {% endif %}
-                                if(guard_ok) {
-                                    // Check if immediate or delayed.
-                                    {% if not trans.delay and not trans.delay_var_original %} // Immediate event transition.
-                                        next_state_event_candidate = State::{{ trans.target_enum_id }}; // Set target state.
-                                        event_transition_found = true; // Mark event transition found.
-                                        goto end_switch_event_{{ state.enum_id }}; // Use goto to exit the inner loop and switch for this state.
-                                    {% else %} // Delayed event transition.
-                                        // Calculate delay (same logic as Phase 1).
-                                        long long delay_ms = 0;
-                                        {% if trans.delay and trans.delay > 0 %}
-                                            delay_ms = {{ trans.delay }};
-                                        {% else %}
-                                            {% if trans.delay_var_original %}
-                                                try { delay_ms = static_cast<long long>({{ trans.delay_var_original }}); }
-                                                catch (...) { delay_ms = -1; std::cerr << "[ERROR] Delay variable '{{ trans.delay_var_original }}' invalid!" << std::endl; }
-                                            {% endif %}
-                                        {% endif %}
-                                        if (delay_ms >= 0) engine.scheduleTimer(delay_ms, stateEnumToName[State::{{ trans.target_enum_id }}]);
-                                    {% endif %}
-                                }
-                             }
-                        {% endif %}
-                     {% endfor %}
-                     end_switch_event_{{ state.enum_id }}:;
+                     
+                            // Consider transition #0: Led_Off -> Led_On
+                            
+                     
+                            // Consider transition #1: Led_On -> Led_Off
+                            
+                     
+                     end_switch_event_STATE_LED_OFF:;
                     break;
                  }
-                 {% endfor %}
+                 
+                 // Check transitions from state: Led_On
+                 case State::STATE_LED_ON:{
+                    bool guard_ok;
+                     
+                            // Consider transition #0: Led_Off -> Led_On
+                            
+                     
+                            // Consider transition #1: Led_On -> Led_Off
+                            
+                     
+                     end_switch_event_STATE_LED_ON:;
+                    break;
+                 }
+                 
                  default: break;
             }
             // If an immediate transition triggered by the event was found:
@@ -390,13 +391,7 @@ void handleStatusRequestCallback() {
     engine.sendStateUpdate(currentSName);
 
     // Send the current values of all variables.
-    {% for var in variables %}
-    {
-        std::stringstream ss;
-        ss << {{ var.name }};
-        engine.sendVarUpdate("{{ var.name }}", ss.str());
-    }
-    {% endfor %}
+    
 
     // Optional: Send last known input/output values for a more complete status picture.
     /*
@@ -457,18 +452,21 @@ int main(int argc, char *argv[]) {
     // Populate maps for easy conversion between state names and enum values.
     stateNameToEnum["STATE_NULL"] = State::STATE_NULL; // Should not be used normally
     stateEnumToName[State::STATE_NULL] = "STATE_NULL";
-    {% for state in states %}
-    stateNameToEnum["{{ state.name }}"] = State::{{ state.enum_id }}; // Map name to enum
-    stateEnumToName[State::{{ state.enum_id }}] = "{{ state.name }}"; // Map enum to name
-    {% endfor %}
+    
+    stateNameToEnum["Led_Off"] = State::STATE_LED_OFF; // Map name to enum
+    stateEnumToName[State::STATE_LED_OFF] = "Led_Off"; // Map enum to name
+    
+    stateNameToEnum["Led_On"] = State::STATE_LED_ON; // Map name to enum
+    stateEnumToName[State::STATE_LED_ON] = "Led_On"; // Map enum to name
+    
 
     // --- Set Initial State ---
     // Set the currentState variable based on the initial state specified in the JSON.
-    currentState = State::{{ initial_state_enum_id }};
+    currentState = State::STATE_LED_OFF;
     // Basic validation: Check if the generated initial state enum is valid.
-    if (currentState == State::STATE_NULL && "{{ initial_state_name }}" != "") {
-         std::cerr << "[ERROR] Initial state '{{ initial_state_name }}' issue!" << std::endl; return 1;
-    } else if ("{{ initial_state_name }}" == "") {
+    if (currentState == State::STATE_NULL && "Led_Off" != "") {
+         std::cerr << "[ERROR] Initial state 'Led_Off' issue!" << std::endl; return 1;
+    } else if ("Led_Off" == "") {
          std::cerr << "[ERROR] No initial state defined!" << std::endl; return 1;
     }
 

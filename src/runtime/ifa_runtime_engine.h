@@ -37,7 +37,6 @@ using EventHandler = std::function<void(const std::string& /*input_name*/, const
  * @param target_state_name The name of the state the automaton should transition to upon timeout.
  */
 using TimeoutHandler = std::function<void(const std::string& /*target_state_name*/)>;
-/*target_state_name*/)>;
 
 /**
  * @brief Callback function type for handling an external termination command or signal.
