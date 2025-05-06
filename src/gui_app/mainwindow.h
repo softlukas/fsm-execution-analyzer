@@ -53,7 +53,7 @@ private slots:
 
     void handleVariableValueEdited(); // Spoločný slot pre všetky QLineEdits
 
-    void handleInputValueEdited(); // Spoločný slot pre všetky QLineEdits
+    
 
     
    
