@@ -32,7 +32,6 @@ SOURCES += \
     ../codegen/CodeGenerator.cpp \
     ../persistence/JsonPersistance.cpp \
     ../persistence/json_conversions.cpp \
-    INteractiveStateItem.cpp
 
 # Hlavičkové súbory GUI a ostatných modulov OKREM runtime
 HEADERS += \
@@ -49,7 +48,6 @@ HEADERS += \
     ../codegen/CodeGenerator.h \
     ../persistence/JsonPersistance.h \
     ../persistence/json_conversions.h \
-    InteractiveStateItem.h
 
 # Formulár
 FORMS += mainwindow.ui
