@@ -48,6 +48,10 @@ std::map<State, std::string> stateEnumToName; // Map: State::STATE_ENUM_ID -> "S
 // --- Runtime State Variables ---
 // Map to store the last known value received for each input channel.
 std::map<std::string, std::string> lastInputValues;
+
+// Map to store the last known value sent for each output channel.
+std::map<std::string, std::string> lastOutputValues;
+
 // The currently active state of the automaton.
 State currentState = State::STATE_NULL;
 // Timestamp recorded when the current state was entered.
@@ -98,6 +102,8 @@ void output(const std::string& output_name, const T& value) {
     std::cout << "[OUTPUT] Sending output: " << output_name << " = " << value_str << std::endl;
     // Call the engine's method to send the update message to the GUI.
     engine.sendOutputUpdate(output_name, value_str);
+
+    lastOutputValues[output_name] = value_str;
 
 }
 
@@ -398,19 +404,11 @@ void handleStatusRequestCallback() {
     }
     {% endfor %}
 
-    // Optional: Send last known input/output values for a more complete status picture.
-    /*
-    // Example for inputs (requires a dedicated message type or modification)
-    for(const auto& pair : lastInputValues) {
-         // engine.sendInputUpdate(pair.first, pair.second); // If such method existed
-         engine.sendMessage("INPUT_LAST " + pair.first + "=\"" + pair.second + "\""); // Using generic message
+    std::cout << "[Callback] Sending last output values..." << std::endl;
+    for(const auto& pair : lastOutputValues) {
+        engine.sendOutputUpdate(pair.first, pair.second);
+        std::cout << "[Callback]   Output: " << pair.first << " = " << pair.second << std::endl;
     }
-    // Example for outputs (would require storing last output values within output() function)
-    // static std::map<std::string, std::string> lastOutputValues;
-    // for(const auto& pair : lastOutputValues) {
-    //     engine.sendOutputUpdate(pair.first, pair.second);
-    // }
-    */
 
     std::cout << "[Callback] Status sent." << std::endl;
 }

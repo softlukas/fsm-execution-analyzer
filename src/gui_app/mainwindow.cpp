@@ -1603,7 +1603,7 @@ void MainWindow::addInputRowToGUI(const std::string& name) {
 
     // Create an editable line edit for the value
     QLineEdit* valueEdit = new QLineEdit(QString::fromStdString(""));
-    connect(valueEdit, &QLineEdit::editingFinished, this, &MainWindow::handleInputValueEdited);
+    connect(valueEdit, &QLineEdit::returnPressed, this, &MainWindow::handleInputReturnPressed); 
     
     valueEdit->setToolTip("Edit variable value");
 
@@ -1672,7 +1672,7 @@ void MainWindow::addInputRowToGUI(const std::string& name) {
     
 }
 
-void MainWindow::handleInputValueEdited() {
+void MainWindow::handleInputReturnPressed() {
     // Get the sender object (the QLineEdit that emitted the signal)
     QLineEdit* senderEdit = qobject_cast<QLineEdit*>(sender());
     if (!senderEdit) {
@@ -1680,7 +1680,7 @@ void MainWindow::handleInputValueEdited() {
         return;
     }
 
-    // Get the object name to identify the variable
+    // Get the object name to identify the variables
     QString varName = senderEdit->objectName();
 
     Input* input = machine->getInput(varName.toStdString());

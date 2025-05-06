@@ -49,9 +49,10 @@ private slots:
      */
     void on_addStateButton_clicked();
 
+    void handleInputReturnPressed();
+
     void handleVariableValueEdited(); // Spoločný slot pre všetky QLineEdits
 
-    void handleInputValueEdited(); // Spoločný slot pre všetky QLineEdits
    
     /**
      * @brief Slot executed when the 'Add Transition' button (addTransitionButton) is clicked.
