@@ -1905,6 +1905,7 @@ void MainWindow::on_addStateButton_clicked() {
     group->setFlag(QGraphicsItem::ItemIsSelectable);
     group->setData(0, QVariant(objectStateId)); // Store the state ID in the group
     group->setData(1, "state"); // Store the state name in the group
+    group->setZValue(2); // Set Z value to 1 for proper stacking order
 
 
     

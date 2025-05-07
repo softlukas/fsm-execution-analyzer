@@ -217,6 +217,7 @@ arrowGroup->addToGroup(textItem);
     }
 
     arrowGroup->setFlag(QGraphicsItem::ItemIsSelectable);
+    arrowGroup->setZValue(1); // Z-index for the arrow group
     scene->addItem(arrowGroup);
     return arrowGroup;
 }
