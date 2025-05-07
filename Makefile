@@ -5,28 +5,34 @@ QMAKE    ?= qmake
 MAKE     ?= make # Explicitne definuj make
 MKDIR = mkdir -p
 RM = rm -rf
-
+TAR = tar
+ZIP = zip
 
 # Adresáre
-BUILD_DIR    = build # Build adresár pre VŠETKO (qmake si vytvorí podadresáre)
+BUILD_DIR    = build
 SRC_DIR      = src
 
 ARCHIVE_NAME = submission
 DOC_DIR = doc
 TEMPLATES_DIR = templates
 THIRDPARTY_DIR = third_party
-
+EXAMPLES_DIR = examples
 # Cesta k hlavnému .pro súboru
-MAIN_PRO_FILE = 0_proj_qt.pro
+MAIN_PRO_FILE = main_pro.pro
 
-# Názov finálneho GUI targetu (bude v build/gui_app/)
-GUI_EXEC_NAME = IfaAutomatonTool
-GUI_TARGET = $(BUILD_DIR)/gui_app/$(GUI_EXEC_NAME) # Cesta k GUI v podprojekte
+# Názov finálneho GUI targetu (bude v build/gui_app/src/)
+GUI_EXEC_NAME = AutomationCreator
+GUI_TARGET = $(BUILD_DIR)/src/gui_app/$(GUI_EXEC_NAME) # Cesta k GUI v podprojekte
 
 # --- Hlavné Ciele ---
 
-# Predvolený cieľ: Zostaví celý projekt (runtime knižnicu a potom GUI)
+
 all: clean $(GUI_TARGET) # Závisí od finálneho produktu
+
+# Predvolený cieľ: Zostaví celý projekt (runtime knižnicu a potom GUI)
+run: all
+	$(GUI_TARGET)
+
 
 # Pravidlo pre zostavenie všetkého
 # Spustí qmake na hlavný .pro a potom make
@@ -46,27 +52,25 @@ clean:
 # Cieľ pre Doxygen (zostáva rovnaký)
 doxygen:
 	@echo ">>> Generating documentation with Doxygen..."
-	doxygen Doxyfile
+	doxygen doc/Doxyfile
 	@echo "<<< Documentation generated in $(DOC_DIR)/html"
 
 # Cieľ pre Pack (zostáva podobný, kopíruješ aj nové .pro súbory)
-pack: clean
+pack:
 	@echo ">>> Creating submission archive: $(ARCHIVE_NAME)..."
 	$(RM) $(ARCHIVE_NAME).tar $(ARCHIVE_NAME).tar.gz $(ARCHIVE_NAME).zip
 	$(MKDIR) $(ARCHIVE_NAME)
 	# Skopíruj potrebné adresáre a súbory
-	cp -r $(SRC_DIR) $(DOC_DIR) $(TEMPLATES_DIR) $(THIRDPARTY_DIR) Makefile README.txt $(MAIN_PRO_FILE) $(SRC_DIR)/runtime/runtime.pro $(SRC_DIR)/gui_app/gui_app.pro $(ARCHIVE_NAME)/
-	# cp -r $(EXAMPLES_DIR) $(ARCHIVE_NAME)/ # Ak máš examples
-	$(RM) $(ARCHIVE_NAME)/$(DOC_DIR)/html
+	cp -r $(SRC_DIR) $(DOC_DIR) $(TEMPLATES_DIR) $(THIRDPARTY_DIR) \
+	Makefile README.txt design.pdf $(MAIN_PRO_FILE) $(EXAMPLES_DIR) $(ARCHIVE_NAME)
+	$(RM) -rf $(ARCHIVE_NAME)/$(DOC_DIR)/html
 	# Vytvor archív
 	$(TAR) -czf $(ARCHIVE_NAME).tar.gz -C $(ARCHIVE_NAME) . --owner=0 --group=0
-	# $(ZIP) -r -q $(ARCHIVE_NAME).zip $(ARCHIVE_NAME)/
-	$(RM) $(ARCHIVE_NAME)
+	(RM) $(ARCHIVE_NAME)
 	@echo "<<< Archive created: $(ARCHIVE_NAME).tar.gz"
-	@echo "!!! Nezabudni skontrolovať obsah archívu a či ide skompilovať (`make clean && make`) !!!"
 
 # Pomocný cieľ
 FORCE:
 
 # Phony targets
-.PHONY: all gui clean doxygen pack FORCE
+.PHONY: all gui clean doxygen pack run FORCE

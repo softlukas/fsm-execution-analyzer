@@ -477,35 +477,75 @@ void MainWindow::processPendingDatagrams()
                     return; // Stop processing this datagram stream for now
                 }
 
-                // --- Load the Machine from JSON ---
-                // !!! ENSURE JsonPersistence::loadFromFile IS IMPLEMENTED !!!
                 std::unique_ptr<Machine> loadedMachine = JsonPersistence::loadFromFile(jsonPath.toStdString());
 
+                // 5. Skontroluj, či načítanie prebehlo úspešne
                 if (!loadedMachine) {
-                    qCritical() << "Failed to load machine from JSON:" << jsonPath;
-                    QMessageBox::critical(this, "Error", "Failed to parse or load the automaton definition file:\n" + jsonPath);
-                    connectedAutomatonName = ""; // Reset connection state
-                    return;
+                    QMessageBox::critical(this, "Load Failed", "Could not load or parse the automaton model from the specified file.\nCheck console output for details.");
+                    qCritical() << "Failed to load machine from:" << jsonPath;
+                    return; // Chyba pri načítaní
                 }
 
-                // --- Success: Update GUI ---
-                machine = loadedMachine.release(); // Take ownership
-                qInfo() << "Successfully loaded machine '" << connectedAutomatonName << "' from JSON.";
-                // ui->statusbar->showMessage("Connected to: " + connectedAutomatonName, 0);
+                qInfo() << "Successfully loaded machine '" << QString::fromStdString(loadedMachine->getName()) << "' from JSON.";
 
-                // Clear scene (should be clear already, but just in case)
-                
+                // --- START OF GUI AND MODEL RESET ---
+                qDebug() << "Preparing to switch models. Clearing old GUI elements and model...";
+
+                // 1. Disconnect old scene 'changed' listeners and clear Graphics Scene
+                for (const auto& conn : stateMoveConnections) {
+                    QObject::disconnect(conn);
+                }
+                stateMoveConnections.clear();
+                qDebug() << "Disconnected old state movement scene listeners.";
+
                 scene->clear();
-                objectStateId = 0; // Reset counters if needed
-                objectTransitionId = 0;
+                qDebug() << "Graphics scene cleared.";
 
-                // Redraw based on the loaded model
-                redrawAutomatonFromModel();
+                // 2. Clear UI Lists (Variables, Inputs, Outputs) by resetting their QGroupBox layouts
+                clearVariableList();
+                clearInputList();
+                clearOutputList();
+                qDebug() << "UI lists (variables, inputs, outputs) cleared by resetting group box layouts.";
 
-                // Populate UI lists (variables, inputs, outputs)
-                populateUIFromModel();   
+                // 3. Delete the old Machine object, if it exists
+                if (machine) {
+                    delete machine;
+                    machine = nullptr;
+                    qDebug() << "Old machine model deleted.";
+                }
+
+                // 4. Take ownership of the new Machine object
+                machine = loadedMachine.release();
+                qDebug() << "Took ownership of the newly loaded machine object: " << QString::fromStdString(machine->getName());
+                // --- END OF GUI AND MODEL RESET ---
+
+                // --- Populate GUI with new model ---
+                qDebug() << "Redrawing automaton and populating UI from the new model...";
+                redrawAutomatonFromModel(); // Redraws states and transitions on the scene
+                populateUIFromModel();      // Populates QGroupBoxes for vars, ins, outs
+
+                setInputFieldsEnabled(true); // Default for a newly loaded, non-connected automaton
                 
-                setInputFieldsEnabled(true);
+                // Update global ID counters for NEW items to be added via GUI
+                int maxStateIdEncountered = -1;
+                if (machine) {
+                    for (const auto& state_pair : machine->getStates()) {
+                        if (state_pair.second && state_pair.second->getStateId() > maxStateIdEncountered) {
+                            maxStateIdEncountered = state_pair.second->getStateId();
+                        }
+                    }
+                    this->objectStateId = maxStateIdEncountered + 1;
+
+                    int maxTransIdEncountered = -1;
+                    for (const auto& trans_ptr : machine->getTransitions()) {
+                        if (trans_ptr && trans_ptr->getTransitionId() > maxTransIdEncountered) {
+                            maxTransIdEncountered = trans_ptr->getTransitionId();
+                        }
+                    }
+                    this->objectTransitionId = maxTransIdEncountered + 1;
+                    qDebug() << "MainWindow ID counters updated: nextStateId=" << this->objectStateId
+                            << ", nextTransitionId=" << this->objectTransitionId;
+                }
 
             } else {
                 // Received NAME unexpectedly (already connected?) - maybe just log
@@ -703,6 +743,11 @@ void MainWindow::on_terminateAutomatButton_clicked(){
 
 void MainWindow::on_connectButton_clicked(){
     qDebug() << "Connect button clicked.";
+
+    if (scene) { // Uisti sa, že scéna existuje
+        scene->clearSelection();
+        qDebug() << "Cleared any existing selection on the scene.";
+    }
 
     // --- 1. Get Ports from User ---
     // (You can reuse/adapt your existing dialog logic or simplify)

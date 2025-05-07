@@ -4,7 +4,7 @@ QT += core gui widgets network
 CONFIG += c++17
 # CONFIG += console 
 
-TARGET = IfaAutomatonTool
+TARGET = AutomationCreator
 TEMPLATE = app
 
 
