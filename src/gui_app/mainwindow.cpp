@@ -1068,7 +1068,7 @@ auto getVisualCenterOfStateItem = [](QGraphicsItemGroup* stateItemGroup) -> QPoi
         group->setData(0, QVariant(stateId)); // Ulož ID stavu (key 0 for state ID)
         group->setData(1, "state");           // Identifikátor typu "state" (key 1 for type)
         group->setData(2, QVariant(QString::fromStdString(stateName))); // Ulož aj meno stavu (key 2 for name)
-
+        group->setZValue(2);
         scene->addItem(group);
         stateSceneItems[stateName] = group;
         state->currentPos = getVisualCenterOfStateItem(group); // Initialize currentPos for the State object

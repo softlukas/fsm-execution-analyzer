@@ -43,6 +43,15 @@ QGraphicsItemGroup* MainWindowUtils::drawArrow(const QPointF &startPos, const QP
     QPen arrowPen(Qt::red, 2); // Pen for the arrow line and head
     qreal arrowSize = 10;      // Size of the arrowhead
 
+    Qt::GlobalColor defaultTextColor = Qt::red; // Default color
+
+    if(endPos.x() < startPos.x()) {
+        arrowPen.setColor(Qt::blue); // Change color if the arrow is going left
+        defaultTextColor = Qt::blue; // Change text color to blue
+    }
+
+
+
     // --- Create a group for the entire transition representation ---
     QGraphicsItemGroup *arrowGroup = new QGraphicsItemGroup();
 
@@ -72,10 +81,11 @@ QGraphicsItemGroup* MainWindowUtils::drawArrow(const QPointF &startPos, const QP
         QPointF arrowLP2 = loopEnd + QPointF(qSin(qDegreesToRadians(-angle) - M_PI + M_PI / 3) * arrowSize, qCos(qDegreesToRadians(-angle) - M_PI + M_PI / 3) * arrowSize);
         QPolygonF arrowLHead; arrowLHead << loopEnd << arrowLP1 << arrowLP2;
         QGraphicsPolygonItem *arrowLHeadItem = new QGraphicsPolygonItem(arrowLHead);
-        arrowLHeadItem->setPen(arrowPen); arrowLHeadItem->setBrush(Qt::red);
+        arrowLHeadItem->setPen(arrowPen); arrowLHeadItem->setBrush(defaultTextColor);
         arrowGroup->addToGroup(arrowLHeadItem);
 
         QGraphicsTextItem* textL = new QGraphicsTextItem(label);
+        textL->setDefaultTextColor(defaultTextColor); // Set the text color to blue
         QRectF textLRect = textL->boundingRect();
         textL->setPos(loopTopCenter.x() - textLRect.width() / 2, loopTopCenter.y() - radiusY - textLRect.height() - 2);
         arrowGroup->addToGroup(textL);
@@ -186,11 +196,12 @@ QPolygonF arrowHeadPolygon;
 arrowHeadPolygon << adjustedEndPos << arrowP1 << arrowP2;
 QGraphicsPolygonItem *arrowHeadItem = new QGraphicsPolygonItem(arrowHeadPolygon);
 arrowHeadItem->setPen(arrowPen);
-arrowHeadItem->setBrush(Qt::red);
+arrowHeadItem->setBrush(defaultTextColor); // Set the color of the arrowhead
 arrowGroup->addToGroup(arrowHeadItem);
 
 // --- Text podmienky ---
 QGraphicsTextItem* textItem = new QGraphicsTextItem(label);
+textItem->setDefaultTextColor(defaultTextColor); // Set the text color to blue
 QPointF textOffsetDirection = normPerp * bezierCurveFactor; 
 qreal textDistance = 12; 
 
