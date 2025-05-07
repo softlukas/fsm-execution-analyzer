@@ -1,3 +1,13 @@
+/**
+ * @file GraphicsView.h
+ * @brief Declares the GraphicsView class, a custom QGraphicsView for handling mouse interactions with state items.
+ * @details This header file defines the GraphicsView class, which provides functionality for detecting mouse clicks
+ * on QGraphicsItemGroup objects representing states and emitting corresponding signals. It also handles zooming
+ * via the mouse wheel.
+ * @authors xsimonl00, xsiaket00
+ * @date Last modified: 2025-05-05
+ */
+
 #ifndef GRAPHICSVIEW_H
 #define GRAPHICSVIEW_H
 

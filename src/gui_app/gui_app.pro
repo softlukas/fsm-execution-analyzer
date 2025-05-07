@@ -2,21 +2,21 @@
 
 QT += core gui widgets network
 CONFIG += c++17
-# CONFIG += console # Odkomentuj ak treba debug výpisy
+# CONFIG += console 
 
 TARGET = IfaAutomatonTool
 TEMPLATE = app
 
-# Definície
-DEFINES += ASIO_STANDALONE # Potrebné aj tu, ak GUI používa Asio (nepriamo cez runtime hlavičky?)
 
-# Cesty k include adresárom
+DEFINES += ASIO_STANDALONE 
+
+
 INCLUDEPATH += \
-    $$PWD/.. \                      # Pridaj adresár src/
+    $$PWD/.. \                      
     $$PWD/../../third_party/asio/include \
     $$PWD/../../third_party/
 
-# Zdrojové súbory GUI a ostatných modulov OKREM runtime
+
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
@@ -33,7 +33,7 @@ SOURCES += \
     ../persistence/JsonPersistance.cpp \
     ../persistence/json_conversions.cpp \
 
-# Hlavičkové súbory GUI a ostatných modulov OKREM runtime
+
 HEADERS += \
     mainwindow.h \
     GraphicsView.h \
@@ -49,14 +49,12 @@ HEADERS += \
     ../persistence/JsonPersistance.h \
     ../persistence/json_conversions.h \
 
-# Formulár
+
 FORMS += mainwindow.ui
 
-# --- Linkovanie statickej knižnice ifa_runtime ---
-# Povie qmake, kde má hľadať knižnice (-L) a ktorú knižnicu linkovať (-l)
-# Predpokladáme, že knižnica bude v build adresári o úroveň vyššie
+
 unix:LIBS += -L$$OUT_PWD/../runtime -lifa_runtime
 
-# Ďalšie závislosti (napr. pre runtime knižnicu, ak ich linkuješ až tu)
+
 unix:LIBS += -lpthread
 unix:LIBS += -lstdc++fs
