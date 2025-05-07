@@ -28,3 +28,6 @@ HEADERS += \
 
 # Závislosti pre linker (pre Asio na Linuxe)
 unix:LIBS += -lpthread
+
+QMAKE_CXXFLAGS += -fsanitize=address -g
+QMAKE_LFLAGS += -fsanitize=address

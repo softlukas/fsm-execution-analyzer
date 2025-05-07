@@ -414,15 +414,6 @@ private:
         std::string& predefinedInput1, std::string& predefinedInput2, 
         std::string* newInput1, std::string* newInput2);
 
-    /**
-     * @brief Sets the text for a given QGraphicsEllipseItem.
-     * 
-     * This function associates a text label with the specified QGraphicsEllipseItem.
-     * The text is typically displayed within or near the ellipse item in the graphics scene.
-     * 
-     * @param ellipseItem A pointer to the QGraphicsEllipseItem to which the text will be set.
-     * @param text The text to be associated with the ellipse item.
-     */
     void setElipseText(QGraphicsEllipseItem* ellipseItem, const std::string& text);
 
     

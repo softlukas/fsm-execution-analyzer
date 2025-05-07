@@ -869,6 +869,12 @@ void MainWindow::on_saveJsonButton_clicked() {
 
 void MainWindow::on_loadJsonButton_clicked() {
     qDebug() << "Load JSON button clicked.";
+    
+    if (scene) { // Uisti sa, že scéna existuje
+        scene->clearSelection();
+        qDebug() << "Cleared any existing selection on the scene.";
+    }
+
     GraphicsView* gView = ui->graphicsView; // Use the correct type
 
     if(gView) {
@@ -1086,6 +1092,10 @@ auto getVisualCenterOfStateItem = [](QGraphicsItemGroup* stateItemGroup) -> QPoi
             }
         
             if (group->isSelected()) {
+                // --- Block signals to prevent re-entrancy ---
+                bool oldSignalsBlocked = scene->signalsBlocked();
+                scene->blockSignals(true);
+        
                 QPointF newVisualCenter = MainWindow::getVisualCenterOfStateItem_static(group);
                 if (state && state->currentPos != newVisualCenter) {
                     qDebug().nospace() << "LAMBDA DETECTED MOVE for '" << QString::fromStdString(state->getName())
@@ -1094,6 +1104,9 @@ auto getVisualCenterOfStateItem = [](QGraphicsItemGroup* stateItemGroup) -> QPoi
                     state->currentPos = newVisualCenter;
                     state->updateTransitionPositions(this->scene, group, machine);
                 }
+        
+                // --- Restore signal blocking state ---
+                scene->blockSignals(oldSignalsBlocked);
             }
         });
         stateMoveConnections.append(conn); // Store the connection
@@ -1889,8 +1902,6 @@ void MainWindow::on_addStateButton_clicked() {
     ellipse->setData(0, QVariant(stateName));
 
 
-    setElipseText(ellipse, stateName.toStdString());
-
     QGraphicsTextItem *text = new QGraphicsTextItem(stateName);
     QRectF textRect = text->boundingRect();
     qreal textX = (width - textRect.width()) / 2;
@@ -2349,95 +2360,72 @@ void MainWindow::editTransition(QGraphicsItemGroup *item) {
     
 }
 
-void MainWindow::editState(QGraphicsItemGroup *item) {
 
-    int stateId = item->data(0).toInt(); // Retrieve the state ID stored in the item
-    State* state = machine->getState(stateId); // Get the state object using the ID
-    if (!state) {
-        qDebug() << "State not found for ID:" << stateId;
-        return;
-    }
-    
+void MainWindow::editState(QGraphicsItemGroup *itemGroup) {
 
+    // --- 1. Získaj ID a objekt State z Machine ---
+    // Predpokladáme konvenciu: 0=ID, 1=Typ, 2=Meno
+    bool idOk;
+    int stateId = itemGroup->data(0).toInt(&idOk);
+    QString itemType = itemGroup->data(1).toString();
 
-    
+    if (!idOk || itemType != "state") { /* ... warning a return ... */ }
+    if (!machine) { /* ... warning a return ... */ }
+    State* state = machine->getState(stateId);
+    if (!state) { /* ... warning a return ... */ }
+    qDebug() << "Attempting to edit state: ID=" << stateId << "Name=" << QString::fromStdString(state->getName());
+
+    // --- 2. Získaj nové údaje od používateľa ---
     std::string newName;
     std::string newAction;
-    
-    std::string currentName = state->getName();
+    std::string currentName = state->getName(); // Získaj aktuálne meno z modelu
     std::string currentAction = state->getAction();
-    
-
     ProccessMultipleArgsInputEditDialog("Edit State", "Enter new state name:", "Enter new action:",
         currentName, currentAction, &newName, &newAction);
+    if (newName.empty()) { /* ... warning a return ... */ }
+    qDebug() << "New name entered:" << QString::fromStdString(newName);
+    qDebug() << "New action entered:" << QString::fromStdString(newAction);
 
-    qDebug () << "New name:" << QString::fromStdString(newName);
+    // --- 3. Aktualizuj model (State objekt) ---
+    // TU PRIDAJ KONTROLU DUPLICITNÉHO MENA, AK SA MENO ZMENILO
+    if (newName != currentName && machine->getStates().count(newName)) {
+         QMessageBox::critical(this, "Error", "A state with the name '" + QString::fromStdString(newName) + "' already exists!");
+         return;
+    }
+    state->setName(newName); // Aktualizuj meno v modeli
+    state->setAction(newAction); // Aktualizuj akciu v modeli
+    qDebug() << "State object in model updated.";
 
-    state->setName(newName);
-    state->setAction(newAction);
-
-
-
-    // --- Aktualizácia grafického prvku ---
-    // 1. Nájdi QGraphicsTextItem v skupine
-    QGraphicsTextItem *textItem = nullptr;
-    for (QGraphicsItem *child : item->childItems()) {
-        textItem = dynamic_cast<QGraphicsTextItem*>(child);
-        if (textItem) {
-            break; // Našli sme ho
-        }
+    // --- 4. Aktualizuj grafickú reprezentáciu (itemGroup) ---
+    QGraphicsTextItem* textItem = nullptr;
+    QGraphicsEllipseItem* ellipseItem = nullptr;
+    for (QGraphicsItem *child : itemGroup->childItems()) {
+         if (!textItem) textItem = dynamic_cast<QGraphicsTextItem*>(child);
+         if (!ellipseItem) ellipseItem = dynamic_cast<QGraphicsEllipseItem*>(child);
+         if (textItem && ellipseItem) break;
     }
 
-    if (textItem) {
-        // 2. Zmeň zobrazený text
-        QString newNameQt = QString::fromStdString(newName); // Použi nové meno z dialógu
-        textItem->setPlainText(newNameQt);
-        qDebug () <<"new name qt" << newNameQt;
+    if (textItem && ellipseItem) {
+        QString newNameQt = QString::fromStdString(newName);
+        textItem->setPlainText(newNameQt); // Zmeň text v GUI
 
-        // 3. Aktualizuj uložené dáta v skupine (ak si menil meno)
-        //item->setData(0, QVariant(newNameQt)); // Ulož NOVÉ meno pod kľúčom 0
+        // --- Aktualizuj uložené dáta ---
+        itemGroup->setData(2, QVariant(newNameQt));      // Kľúč 2 = MENO
+        ellipseItem->setData(0, QVariant(newNameQt));    // Kľúč 0 v elipse = MENO (pre highlight?)
 
-        // 4. Prerátaj pozíciu textu, aby bol vycentrovaný
-        //    Potrebujeme nájsť aj elipsu na získanie rozmerov
-        QGraphicsEllipseItem* ellipseItem = nullptr;
-         for (QGraphicsItem *child : item->childItems()) {
-            ellipseItem = dynamic_cast<QGraphicsEllipseItem*>(child);
-            if (ellipseItem) {
-                break;
-            }
-        }
-        setElipseText(ellipseItem, newName);
-        /*
-        if(ellipseItem) {
-            QRectF ellipseRect = ellipseItem->rect(); // Získaj rozmery elipsy
-            QRectF textRect = textItem->boundingRect();
-            qreal textX = (ellipseRect.width() - textRect.width()) / 2;
-            qreal textY = (ellipseRect.height() - textRect.height()) / 2;
-            textItem->setPos(textX, textY); // Nastav novú pozíciu textu
-        } else {
-             qWarning() << "Could not find ellipse item within the group to recenter text.";
-        }
-        */
+        // --- Prerátaj pozíciu textu ---
+        QRectF ellipseRect = ellipseItem->rect();
+        QRectF textRect = textItem->boundingRect();
+        qreal textX = (ellipseRect.width() - textRect.width()) / 2;
+        qreal textY = (ellipseRect.height() - textRect.height()) / 2;
+        textItem->setPos(textX, textY);
 
-        qDebug() << "State item text updated to:" << newNameQt;
+        qDebug() << "State graphics (text, position, data) updated for:" << newNameQt;
     } else {
-        qWarning() << "Could not find text item within the group to update.";
+        qWarning() << "Could not find text/ellipse item within the state group ID:" << stateId;
     }
-   
 }
 
-void MainWindow::setElipseText(QGraphicsEllipseItem* ellipseItem, const std::string& text) {
-    if (!ellipseItem) {
-        qWarning() << "Cannot set text: Invalid ellipse item.";
-        return;
-    }
-
-    QGraphicsTextItem* textItem = new QGraphicsTextItem(QString::fromStdString(text));
-    QRectF textRect = textItem->boundingRect();
-    qreal textX = (ellipseItem->rect().width() - textRect.width()) / 2;
-    qreal textY = (ellipseItem->rect().height() - textRect.height()) / 2;
-    textItem->setPos(textX, textY);
-}
 
 void MainWindow::ProccessMultipleArgsInputEditDialog(const std::string& title, const std::string& label1Text, const std::string& label2Text, 
     std::string& predefinedInput1, std::string& predefinedInput2, 
