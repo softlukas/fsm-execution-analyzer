@@ -15,6 +15,3 @@ src/gui_app.depends = src/runtime
 # CONFIG += ordered # Môže pomôcť s poradím
 
 # Tu už nedefinuješ SOURCES, HEADERS, atď. pre celý projekt
-
-QMAKE_CXXFLAGS += -fsanitize=address -g
-QMAKE_LFLAGS += -fsanitize=address

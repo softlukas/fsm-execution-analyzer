@@ -52,10 +52,6 @@ HEADERS += \
 
 FORMS += mainwindow.ui
 
-QMAKE_CXXFLAGS += -fsanitize=address -g
-QMAKE_LFLAGS += -fsanitize=address
-
-
 unix:LIBS += -L$$OUT_PWD/../runtime -lifa_runtime
 
 
