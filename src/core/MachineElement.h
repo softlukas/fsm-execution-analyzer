@@ -1,14 +1,19 @@
+/**
+ * @file MachineElement.h
+ * @brief Declares the MachineElement class, a base class for elements within the state machine that have a name.
+ * @details This header file defines the MachineElement class, which serves as a base for Variable, Input, and Output classes, providing a common interface for named elements.
+*  @authors xsimonl00, xsiaket00
+ * @date Last modified: 2025-05-05
+ */
+
+
+
 #ifndef MACHINEELEMENT_H // Include guard start
 #define MACHINEELEMENT_H
 
-#include <string> // For std::string
+#include <string>
 
-/**
- * @brief Base class for elements within the state machine that have a name.
- * Used as a base for Variable, Input, and Output classes.
- * @authors Your Authors (xname01, xname02, xname03) // !!! FILL IN YOUR NAMES/LOGINS !!!
- * @date 2025-04-27 // Date of creation
- */
+
 class MachineElement {
 public:
     /**
@@ -36,8 +41,6 @@ public:
     }
 
     // Disable copy and move operations for the base class if they are not needed
-    // or if derived classes manage resources that shouldn't be shallow copied.
-    // This is optional but often good practice for base classes.
     MachineElement(const MachineElement&) = delete;
     MachineElement& operator=(const MachineElement&) = delete;
     MachineElement(MachineElement&&) = delete;

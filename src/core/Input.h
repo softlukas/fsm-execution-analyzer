@@ -1,3 +1,15 @@
+/**
+ * @file Input.h
+ * @brief Declares the Input class, representing an input channel in a machine.
+ * @details This header file provides the declaration of the Input class, which inherits from MachineElement.
+ * It includes methods for managing the last known value of the input and ensures proper encapsulation.
+ * The class is designed to be used as part of a larger machine framework.
+ * @authors xsimonl00, xsiaket00
+ * @date Last modified: 2025-05-05
+ */
+
+
+
 #ifndef INPUT_H // Include guard start
 #define INPUT_H
 
@@ -5,12 +17,7 @@
 #include <string>           // For std::string
 #include <optional>         // For std::optional to store the last value
 
-/**
- * @brief Represents an input channel of the automaton, inheriting from MachineElement.
- * @details Stores the input name (via base class) and the last known value received.
- * @authors Your Authors (xname01, xname02, xname03) // !!! FILL IN YOUR NAMES/LOGINS !!!
- * @date 2025-04-27 // Date of creation
- */
+
 class Input : public MachineElement { // Public inheritance from MachineElement
 public:
     /**
@@ -21,9 +28,6 @@ public:
         : MachineElement(name), // Call the base class constructor to initialize the name
           lastKnownValue(std::nullopt) // Initialize optional as empty
     {}
-
-    // Note: getName() is inherited from MachineElement.
-    // Note: Virtual destructor is inherited.
 
     // --- Getters specific to Input ---
     /**

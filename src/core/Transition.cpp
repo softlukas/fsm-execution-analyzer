@@ -1,32 +1,20 @@
 /**
- * @file Transition.cpp
- * @brief Implementation of the Transition class.
- * @authors Your Authors (xname01, xname02, xname03) // !!! FILL IN YOUR NAMES/LOGINS !!!
- * @date 2025-04-24 // Date of creation
+ * @file Transition.h
+ * @brief Declaration of the Transition class for managing state transitions within the automaton.
+ * @details This file contains the declaration of the Transition class, which represents a transition between states in the interpreted finite automaton. It includes methods to handle the source and target states, transition conditions, delays, and other related properties.
+ * @authors Your Authors (xname01, xname02, xname03)
+ * @date Last modified: 2025-05-05
  */
 
 #include "Transition.h" // Make sure this line is exactly like this
 #include "State.h" // Include the State class header
 #include <sstream> // Include for std::ostringstream
-/*
-Transition::Transition(State* sourceState,
-                       State* targetState,
-                       const std::string& eventName,
-                       const std::string& condition,
-                       int delayMs) 
-    : sourceState(sourceState),
-      targetState(targetState),
-      triggerEvent(eventName),
-      guardCondition(condition),
-      delayMs(delayMs) {
-    // Constructor body
-}
-*/
+
 
 Transition::Transition(State* sourceState, State* targetState, const int transitionId, 
                        const std::string& condition, const int delayMs)
-    : sourceState(sourceState), // Create a new State object
-      targetState(targetState), // Create a new State object
+    : sourceState(sourceState), 
+      targetState(targetState), 
       transitionId(transitionId),
       condition(condition),
         delayMs(delayMs)
@@ -36,21 +24,21 @@ Transition::Transition(State* sourceState, State* targetState, const int transit
       }
 
 
-    State* Transition::getSourceState() const {
-        return sourceState;
-    }
+State* Transition::getSourceState() const {
+    return sourceState;
+}
 
-    State* Transition::getTargetState() const {
-        return targetState;
-    }
+State* Transition::getTargetState() const {
+    return targetState;
+}
  
- const std::string& Transition::getTriggerEventName() const {
-     return triggerEvent;
- }
+const std::string& Transition::getTriggerEventName() const {
+    return triggerEvent;
+}
  
- const std::string& Transition::getGuardCondition() const {
-     return guardCondition;
- }
+const std::string& Transition::getGuardCondition() const {
+    return guardCondition;
+}
  
 const int Transition::getDelayMs() const {
     return delayMs;
@@ -71,14 +59,14 @@ const Transition& Transition::getTransitionBasedOnId() const {
 const std::string& Transition::DisplayTransition() const {
     static std::string result;
     std::ostringstream oss;
-    //oss << "Transition from " << sourceState.getName().c_str() << " to " << targetState.getName().c_str() << "\n";
+    
     oss << "Condition: " << condition << "\n";
     oss << "Delay: " << delayMs << " ms\n";
     result = oss.str();
     return result;
 }
 
-// setter implementation
+
 void Transition::setCondition(const std::string& condition) {
     this->condition = condition;
 }
@@ -86,20 +74,19 @@ void Transition::setDelay(int delayMs) {
     this->delayMs = delayMs;
 }
 
-// V Transition.cpp
 
-// --- Implementation for getSourceStateId ---
+
 int Transition::getSourceStateId() const {
-    // Call getStateId() on the referenced source State object
+   
     return sourceState->getStateId();
 }
 
-// --- Implementation for getDestinationStateId ---
+
 int Transition::getDestinationStateId() const {
-    // Call getStateId() on the referenced target State object
+    
     return targetState->getStateId();
 }
 
  
- // Implementations of other methods (like condition evaluation) will come later...
+ 
  

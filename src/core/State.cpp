@@ -1,21 +1,22 @@
 /**
- * @file State.cpp
- * @brief Implementation of the State class.
- * @authors Your Authors (xname01, xname02, xname03) // !!! FILL IN YOUR NAMES/LOGINS !!!
- * @date 2025-04-24 // Current creation date
+ * @file State.h
+ * @brief Defines the State class for managing states in the automaton.
+ * @details This header file declares the State class, which encapsulates a single state in the interpreted finite automaton. It provides methods for managing state attributes, transitions, and graphical representations within the automaton.
+ * @authors xsimonl00, xsiaket00
+ * @date Last modified: 2025-05-05
  */
 
- #include "State.h" // Include the header file
- #include <QGraphicsScene> // Include the QGraphicsScene header
- #include "../gui_app/mainWindowUtils.h" // Include the MainWindowUtils header
- #include <QDebug> // Include the QDebug header for debugging
- #include "Transition.h" // Include the Transition header
-#include "Machine.h" // Include the Machine header
+
+#include "State.h" 
+#include <QGraphicsScene> 
+#include "../gui_app/mainWindowUtils.h" 
+#include <QDebug> 
+#include "Transition.h" 
+#include "Machine.h" 
  
  State::State(const std::string& name, const std::string& action, int stateId)
      : stateName(name), stateOutput(action), stateId(stateId) {
-     // Constructor body can be empty for now,
-     // initialization happened in the initializer list.
+     
  }
  
  const std::string& State::getName() const {
@@ -42,19 +43,17 @@
  QPointF State::getVisualCenterOfStateItem_static(QGraphicsItemGroup* stateItemGroup) {
     if (!stateItemGroup) {
         qWarning() << "MainWindow::getVisualCenterOfStateItem_static: Received null stateItemGroup.";
-        return QPointF(); // Vráť neplatný bod alebo predvolený bod
+        return QPointF();
     }
 
     for (QGraphicsItem* child : stateItemGroup->childItems()) {
         if (QGraphicsEllipseItem* ellipse = dynamic_cast<QGraphicsEllipseItem*>(child)) {
-            // ellipse->rect() je v lokálnych súradniciach elipsy (napr. (0,0,šírka,výška))
-            // ellipse->rect().center() je stred elipsy v jej vlastných súradniciach (napr. (šírka/2, výška/2))
-            // mapToScene pretransformuje tento lokálny stred do súradníc scény
+            
             return stateItemGroup->mapToScene(ellipse->rect().center());
         }
     }
 
-    // Fallback, ak sa elipsa nenájde (nemalo by nastať pri správnej štruktúre skupiny)
+   
     qWarning() << "MainWindow::getVisualCenterOfStateItem_static: Ellipse not found in state group for item at scene pos"
                << stateItemGroup->scenePos() << ". Falling back to sceneBoundingRect().center().";
     return getVisualCenterOfStateItem_static(stateItemGroup);
@@ -69,24 +68,12 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
     printTransitions();
     qDebug() << "----------------------------------------------------------------";
 
-
-    //if (outgoingTransitions.empty()) {
-        //qDebug() << "No outgoing transitions to update.";
-        //return;
-    //}
-    //if(incomingTranstions.empty()) {
-        //qDebug() << "No incoming transitions to update.";
-        //return;
-    //}
-
-    //qDebug() << "---------------------------------------------------------------";
-
     for (const auto& [id, transition] : outgoingTransitions) {
         Transition *trans = machine->getTransition(id);
         State *targetState = trans->getTargetState();
         std::string condition = trans->getCondition();
 
-        //QGraphicsItemGroup* group = MainWindowUtils::findItemGroupByIdAndType(scene, id, "Transition");
+       
         QGraphicsItemGroup* group = std::get<0>(transition);
 
         const QPointF startPos = getVisualCenterOfStateItem_static(stateGroup);
@@ -103,10 +90,6 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
             qDebug() << "Group not found in the scene. Cannot remove.";
         }
 
-        //if (startPos == endPos) {
-            //continue;
-        //}
-
         QPointF actualStartPos;
         QPointF actualEndPos;
 
@@ -115,15 +98,11 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
             outgoingTransitions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
             targetState->setIncomingTransitionGroup(id, newTransition, actualStartPos, actualEndPos);
             qDebug() << "Outgoing transition state updated";
-            //incomingTranstions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
-        } else {
             
         }
     }
 
-    if (outgoingTransitions.empty()) {
-       
-    }
+   
 
     for (const auto& [id, transition] : incomingTranstions) {
         Transition *trans = machine->getTransition(id);
@@ -138,9 +117,7 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
 
         scene->removeItem(group);
 
-        //if (startPos == endPos) {
-            //continue;
-        //}
+        
 
         QPointF actualStartPos;
         QPointF actualEndPos;
@@ -148,18 +125,44 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
         QGraphicsItemGroup* newTransition = MainWindowUtils::drawArrow(startPos, endPos, QString::fromStdString(condition), id, scene, &actualStartPos, &actualEndPos);
         if (newTransition) {
             incomingTranstions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
-            //outgoingTransitions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
+           
             sourceState->setOutgoingTransitionGroup(id, newTransition, actualStartPos, actualEndPos);
 
             qDebug() << "Incoming transition state udpdated";
-            
-        } else {
             
         }
     }
 }
 
  
+void State::addIncomingTransitionGroup(QGraphicsItemGroup* transitionGroup, const QPointF& data1, const QPointF& data2) {
+    if (incomingTranstions.find(transitionGroup->data(1).toInt()) != incomingTranstions.end()) {
+        qDebug() << "Incoming transition with ID" << transitionGroup->data(0).toInt() << "already exists. No new record created.";
+        return;
+    }
+    incomingTranstions.insert({transitionGroup->data(1).toInt(), std::make_tuple(transitionGroup, data1, data2)});
+}
+
+void State::addOutgoingTransitionGroup(QGraphicsItemGroup* transitionGroup, const QPointF& data1, const QPointF& data2) {
+    if (outgoingTransitions.find(transitionGroup->data(1).toInt()) != outgoingTransitions.end()) {
+        qDebug() << "Outgoing transition with ID" << transitionGroup->data(0).toInt() << "already exists. No new record created.";
+        return;
+    }
+    outgoingTransitions.insert({transitionGroup->data(1).toInt(), std::make_tuple(transitionGroup, data1, data2)});
+}
+
+void State::setIncomingTransitionGroup(int transitionId, QGraphicsItemGroup* transitionGroup, const QPointF& data1, const QPointF& data2) {
+    
+    incomingTranstions[transitionId] = std::make_tuple(transitionGroup, data1, data2);
+
+}
+
+void State::setOutgoingTransitionGroup(int transitionId, QGraphicsItemGroup* transitionGroup, const QPointF& data1, const QPointF& data2) {
+    
+    outgoingTransitions[transitionId] = std::make_tuple(transitionGroup, data1, data2);
+    
+}
+
 
 
 

@@ -1,16 +1,21 @@
+/**
+ * @file Output.h
+ * @brief Defines the Output class for managing output channels in the machine.
+ * @details This header file declares the Output class, which represents an output channel in the machine. It provides methods for recording and retrieving the last sent value, ensuring proper encapsulation and functionality for output management.
+ * @authors xsimonl00, xsiaket00
+ * @date Last modified: 2025-05-05
+ */
+
+
+
 #ifndef OUTPUT_H // Include guard start
 #define OUTPUT_H
 
-#include "MachineElement.h" // Include the base class definition
-#include <string>           // For std::string
-#include <optional>         // For std::optional to store the last sent value
+#include "MachineElement.h"
+#include <string>           
+#include <optional>         
 
-/**
- * @brief Represents an output channel of the automaton, inheriting from MachineElement.
- * @details Stores the output name (via base class) and the last value sent through it.
- * @authors Your Authors (xname01, xname02, xname03) // !!! FILL IN YOUR NAMES/LOGINS !!!
- * @date 2025-04-27 // Date of creation
- */
+
 class Output : public MachineElement { // Public inheritance from MachineElement
 public:
     /**
@@ -21,9 +26,6 @@ public:
         : MachineElement(name), // Call the base class constructor to initialize the name
           lastSentValue(std::nullopt) // Initialize optional as empty
     {}
-
-    // Note: getName() is inherited from MachineElement.
-    // Note: Virtual destructor is inherited.
 
     // --- Getters specific to Output ---
     /**

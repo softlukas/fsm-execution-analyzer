@@ -1,52 +1,103 @@
+/**
+ * @file Transition.h
+ * @brief Declaration of the Transition class for managing state transitions within the automaton.
+ * @details This file contains the declaration of the Transition class, which represents a transition between states in the interpreted finite automaton. It includes methods to handle the source and target states, transition conditions, delays, and other related properties.
+ * @authors xsimonl00, xsiaket00
+ * @date Last modified: 2025-05-05
+ */
+
+
+
 #ifndef TRANSITION_H // Include guard
 #define TRANSITION_H
 
 #include <string>
-#include <optional> // Or use empty strings / sentinel values for optional parts
+#include <optional> 
 #include "State.h" // Include the State class header
 #include <iostream>
-/**
- * @brief Represents a transition between states in the interpreted finite automaton.
- * @authors Your Authors (xname01, xname02, xname03) // !!! FILL IN YOUR NAMES/LOGINS !!!
- * @date 2025-04-24 // Date of creation
- */
+
+
+
 class Transition {
 public:
     /**
-     * @brief Constructor for creating a transition.
-     * @param sourceName Name of the source state.
-     * @param targetName Name of the target state.
-     * @param eventName Name of the input event that triggers this transition (can be empty).
-     * @param condition Guard condition as a C/C++ expression string (can be empty).
-     * @param delayMs Delay in milliseconds before the transition occurs (-1 or 0 if immediate).
-     */
-    //Transition(const State* sourceState,
-               //const State* targetState,
-               //const std::string& eventName, // Use "" if no specific event needed
-               //const std::string& condition, // Use "" if no guard condition
-               //int delayMs);                 // Use e.g., 0 or -1 for no delay
-
-    /**
-     * @brief Constructor for creating a transition with only source and target states.
-     * @param sourceState Pointer to the source state object.
-     * @param targetState Pointer to the target state object.
+     * @brief Constructs a Transition object.
+     * 
+     * @param sourceState Pointer to the source state of the transition.
+     * @param targetState Pointer to the target state of the transition.
+     * @param transitionId Unique identifier for the transition.
+     * @param condition Optional guard condition for the transition (default is an empty string).
+     * @param delayMs Optional delay in milliseconds before the transition occurs (default is 0).
      */
     Transition(State* sourceState, State* targetState, const int transitionId, const std::string& condition = "", const int delayMs = 0);
 
     // --- Getters ---
+    /**
+     * @brief Gets the name of the start state of the transition.
+     * 
+     * @return std::string The name of the start state.
+     */
     const std::string& getSourceName() const;
+    /**
+     * @brief Gets the name of the target state of the transition.
+     * 
+     * @return std::string The name of the target state.
+     */
     const std::string& getTargetName() const;
+    /**
+     * @brief Gets the name of the trigger event for the transition.
+     * 
+     * @return std::string The name of the trigger event.
+     */
     const std::string& getTriggerEventName() const;
+    /**
+     * @brief Gets the guard condition for the transition.
+     * 
+     * @return std::string The guard condition.
+     */
     const std::string& getGuardCondition() const;
+    /**
+     * @brief Gets the source state of the transition.
+     * 
+     * @return State* Pointer to the source state.
+     */
     State* getSourceState() const;
+    /**
+     * @brief Gets the target state of the transition.
+     * 
+     * @return State* Pointer to the target state.
+     */
     State* getTargetState() const;
+    /**
+     * @brief Gets the delay in milliseconds for the transition.
+     * 
+     * @return int The delay in milliseconds.
+     */
     const int getDelayMs() const;
+    /**
+     * @brief Gets the condition for the transition.
+     * 
+     * @return std::string The condition.
+     */
     const std::string& getCondition() const;
-
+    /**
+     * @brief Gets the ID of the transition.
+     * 
+     * @return int The ID of the transition.
+     */
     const int getTransitionId() const;
-    
+    /**
+     * @brief Gets the transition based on its ID.
+     * 
+     * @return const Transition& Reference to the transition.
+     */
     const Transition& getTransitionBasedOnId() const;
     
+    /**
+     * @brief Gets the display transition string.
+     * 
+     * @return const std::string& The display transition string.
+     */
     const std::string& DisplayTransition() const;
 
     /**
@@ -63,18 +114,47 @@ public:
     int getSourceStateId() const;      // <-- AJ TENTO RIADOK
 
     // --- Setters ---
+    /**
+     * @brief Sets the source state of the transition.
+     * 
+     * @param sourceState Pointer to the new source state.
+     */
     void setCondition(const std::string& condition);
+    /**
+     * @brief Sets the target state of the transition.
+     * 
+     * @param targetState Pointer to the new target state.
+     */
     void setDelay(int delayMs);
 
-    // We might add methods later to evaluate the condition, etc.
-
 private:
-    State *sourceState;              // Source state object
-    State *targetState;    // Name of the target state
-    std::string triggerEvent;       // Name of the input event required (if any)
-    std::string guardCondition;     // Guard condition string (if any)
+    /**
+     * @brief The source state object of the transition.
+     */
+    State *sourceState;
+    /**
+     * @brief The target state object of the transition.
+     */             
+    State *targetState;
+    /**
+     * @brief The trigger of the transition.
+     */              
+    std::string triggerEvent;
+    /**
+     * @brief The guard condition string for the transition.
+     */
+    std::string guardCondition;     
+    /**
+     * @brief The condition string for the transition.
+     */
     std::string condition;
-    int         delayMs;            // Delay in milliseconds (e.g., 0 or -1 for none)
+     /**
+     * @brief The delay in milliseconds for the transition.
+     */
+    int         delayMs;
+    /**
+     * @brief The unique identifier for the transition.
+     */            
     const int transitionId;
     
 };

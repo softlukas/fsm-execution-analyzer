@@ -1,16 +1,18 @@
+/**
+ * @file Variable.h
+ * @brief Defines the Variable class, representing an internal variable within the automaton.
+ * @details The Variable class inherits from MachineElement and provides functionality to store and manage a variable's name, value, and type hint.
+ * @authors xsiaket00, xsimonl00
+ * @date Last modified: 2025-05-05
+ */
+
 #ifndef VARIABLE_H // Include guard start
 #define VARIABLE_H
 
 #include "MachineElement.h" // Include the base class definition
 #include <string>           // For std::string
-#include <any>              // Optional: Consider using std::any later for typed values
+#include <any>              
 
-/**
- * @brief Represents an internal variable within the automaton, inheriting from MachineElement.
- * @details Stores the variable's name (via base class), its current value, and a type hint.
- * @authors Your Authors (xname01, xname02, xname03) // !!! FILL IN YOUR NAMES/LOGINS !!!
- * @date 2025-04-27 // Date of creation
- */
 class Variable : public MachineElement { // Public inheritance from MachineElement
 public:
     /**
@@ -25,13 +27,7 @@ public:
           typeHint(typeHint)
     {}
 
-
-    
-
-    // Note: getName() is inherited from MachineElement and doesn't need to be redefined.
-    // Note: The virtual destructor ~MachineElement() is also inherited.
-
-    // --- Getters specific to Variable ---
+    // getter section 
     /**
      * @brief Gets the current value of the variable as a string.
      * @return const std::string& Constant reference to the current value string.
@@ -70,9 +66,6 @@ private:
      */
     std::string typeHint;
 
-
-
-    // std::any typedValue; // Optional: Alternative storage for typed values
 };
 
 #endif // VARIABLE_H // Include guard end

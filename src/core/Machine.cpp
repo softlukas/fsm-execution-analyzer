@@ -1,8 +1,10 @@
 /**
  * @file Machine.cpp
- * @brief Implementation of the Machine class (formerly Automaton).
- * @authors Your Authors (xname01, xname02, xname03) // !!! FILL IN YOUR NAMES/LOGINS !!!
- * @date 2025-04-26 // Date of creation/update
+ * @brief Implements the Machine class, representing a state machine with states, transitions, variables, inputs, and outputs.
+ * @details This source file provides the implementation of the Machine class, including methods for building, managing, and executing the logic of a state machine.
+ * It also includes functionality for runtime interaction, such as processing inputs, updating variables, and executing transitions.
+ * @authors xsimonl00, xsiaket00
+ * @date Last modified: 2025-05-05
  */
 
 #include "Machine.h"     // Include the corresponding header file
@@ -11,28 +13,17 @@
 #include <algorithm>     // For std::remove_if (used in timer logic)
 #include <utility>       // For std::move
 
-// --- Constructor ---
 
-/**
- * @brief Constructs a Machine object with the given name.
- * @param name The name of the state machine.
- */
 Machine::Machine(const std::string& name)
     : machineName(name), // Initialize the machine name
     running(false),
     terminationRequested(false) // Initialize interpreter state flags
-{
-    // Constructor body can be empty if initialization is done in the list
-    std::cout << "Machine '" << machineName << "' created." << std::endl;
-}
+    {
+        // Constructor body can be empty if initialization is done in the list
+        std::cout << "Machine '" << machineName << "' created." << std::endl;
+    }
 
-// --- Methods for building the automaton ---
 
-/**
- * @brief Adds a state to the machine.
- * @param state A unique_ptr to the State object to add. Ownership is transferred.
- * @throws std::runtime_error if a state with the same name already exists.
- */
 void Machine::addState(std::unique_ptr<State> state) {
     if (!state) return; // Do nothing if null pointer is passed
     auto name = state->getName();
@@ -42,10 +33,7 @@ void Machine::addState(std::unique_ptr<State> state) {
     states[name] = std::move(state); // Move ownership into the map
 }
 
-/**
- * @brief Adds a transition to the machine.
- * @param transition A unique_ptr to the Transition object to add. Ownership is transferred.
- */
+
 void Machine::addTransition(std::unique_ptr<Transition> transition) {
     if (!transition) return;
     // Optional: Add checks here if source/target states exist in the 'states' map
@@ -61,11 +49,7 @@ Transition* Machine::getTransition(const int transitionId) const {
     return nullptr; // Transition not found
 }
 
-/**
- * @brief Adds a variable to the machine.
- * @param variable A unique_ptr to the Variable object to add. Ownership is transferred.
- * @throws std::runtime_error if a variable with the same name already exists.
- */
+
 void Machine::addVariable(std::unique_ptr<Variable> variable) {
     if (!variable) return;
     auto name = variable->getName();
@@ -75,11 +59,7 @@ void Machine::addVariable(std::unique_ptr<Variable> variable) {
     variables[name] = std::move(variable);
 }
 
-/**
- * @brief Adds an input channel to the machine.
- * @param input A unique_ptr to the Input object to add. Ownership is transferred.
- * @throws std::runtime_error if an input with the same name already exists.
- */
+
 void Machine::addInput(std::unique_ptr<Input> input) {
     if (!input) return;
     auto name = input->getName();
@@ -91,11 +71,7 @@ void Machine::addInput(std::unique_ptr<Input> input) {
 
 
 
-/**
- * @brief Adds an output channel to the machine.
- * @param output A unique_ptr to the Output object to add. Ownership is transferred.
- * @throws std::runtime_error if an output with the same name already exists.
- */
+
 void Machine::addOutput(std::unique_ptr<Output> output) {
     if (!output) return;
     auto name = output->getName();
@@ -119,28 +95,23 @@ void Machine::setInitialState(const std::string& stateName) {
 
 // --- Getters for definition ---
 
-/**
- * @brief Gets the name of the machine.
- */
+
 const std::string& Machine::getName() const {
     return machineName;
 }
 
 void Machine::setName(const std::string& newName) {
     if (newName.empty()) {
-        // Prípadne vyhodiť výnimku alebo len varovať
+        
         std::cerr << "Warning: Attempted to set empty machine name." << std::endl;
         return;
     }
-    // TODO: Prípadná validácia mena (napr. povolené znaky)
+   
     this->machineName = newName;
     std::cout << "Machine renamed to '" << this->machineName << "'" << std::endl;
 }
 
-/**
- * @brief Gets a pointer to the initial state.
- * @return const State* Pointer to the initial state, or nullptr if not set/found.
- */
+
 const State* Machine::getInitialState() const {
     if (initialStateName.empty() || !states.count(initialStateName)) {
         return nullptr;
@@ -150,35 +121,23 @@ const State* Machine::getInitialState() const {
     return states.at(initialStateName).get();
 }
 
-/**
- * @brief Gets a pointer to a state by its name.
- * @param name The name of the state to find.
- * @return const State* Pointer to the state, or nullptr if not found.
- */
+
 State* Machine::getState(const int stateId) const {
     
     for (const auto& pair : states) {
-        // pair.first  je std::string (meno stavu)
-        // pair.second je const std::unique_ptr<State>& (ukazovateľ na stav)
-
-        // Získaj ukazovateľ na State objekt a zavolaj jeho metódu getStateId()
-        // Predpokladáme, že trieda State má metódu getStateId()
+       
         if (pair.second->getStateId() == stateId) {
-            // Našli sme stav so správnym ID
-            return pair.second.get(); // Získaj raw pointer, ak ho potrebuješ
             
-            // return nalezenyStav; // Alebo urob, čo potrebuješ
+            return pair.second.get(); 
+            
+            
         }
     }
     return nullptr;
 }
 
 
-/**
- * @brief Gets a pointer to a variable by its name.
- * @param name The name of the variable to find.
- * @return const Variable* Pointer to the variable, or nullptr if not found.
- */
+
 Variable* Machine::getVariable(const std::string& name) const {
     auto it = variables.find(name);
     if (it != variables.end()) {
@@ -187,11 +146,7 @@ Variable* Machine::getVariable(const std::string& name) const {
     return nullptr;
 }
 
-/**
- * @brief Gets a pointer to an input channel by its name.
- * @param name The name of the input to find.
- * @return const Input* Pointer to the input, or nullptr if not found.
- */
+
 Input* Machine::getInput(const std::string& name) const {
     auto it = inputs.find(name);
     if (it != inputs.end()) {
@@ -220,11 +175,7 @@ void Machine::removeVariable(const std::string& name) {
     }
 }
 
-/**
- * @brief Gets a pointer to an output channel by its name.
- * @param name The name of the output to find.
- * @return const Output* Pointer to the output, or nullptr if not found.
- */
+
 const Output* Machine::getOutput(const std::string& name) const {
     auto it = outputs.find(name);
     if (it != outputs.end()) {
@@ -234,49 +185,34 @@ const Output* Machine::getOutput(const std::string& name) const {
 }
 
 
-/**StateGraphicItem
- * @brief Gets a constant reference to the map of all states.
- */
+
 const std::map<std::string, std::unique_ptr<State>>& Machine::getStates() const {
     return states;
 }
 
-/**
- * @brief Gets a constant reference to the map of all variables.
- */
+
 const std::map<std::string, std::unique_ptr<Variable>>& Machine::getVariables() const {
     return variables;
 }
 
-/**
- * @brief Gets a constant reference to the map of all inputs.
- */
+
 const std::map<std::string, std::unique_ptr<Input>>& Machine::getInputs() const {
     return inputs;
 }
 
-/**
- * @brief Gets a constant reference to the map of all outputs.
- */
+
 const std::map<std::string, std::unique_ptr<Output>>& Machine::getOutputs() const {
     return outputs;
 }
 
-/**
- * @brief Gets a constant reference to the vector of all transitions.
- */
+
 const std::vector<std::unique_ptr<Transition>>& Machine::getTransitions() const {
     return transitions;
 }
 
 // --- Methods for interacting during runtime ---
 
-/**
- * @brief Sets the value of an existing variable.
- * @param name The name of the variable to set.
- * @param value The new value (as a string).
- * @return bool True if the variable was found and set, false otherwise.
- */
+
 bool Machine::setVariableValue(const std::string& name, const std::string& value) {
     auto it = variables.find(name);
     if (it != variables.end()) {
@@ -287,12 +223,7 @@ bool Machine::setVariableValue(const std::string& name, const std::string& value
 }
 
 
-/**
- * @brief Updates the last known value of an input channel.
- * @param name The name of the input channel.
- * @param value The new value received.
- * @return bool True if the input was found and updated, false otherwise.
- */
+
 bool Machine::updateInputValue(const std::string& name, const std::string& value) {
     auto it = inputs.find(name);
     if (it != inputs.end()) {
@@ -302,11 +233,7 @@ bool Machine::updateInputValue(const std::string& name, const std::string& value
     return false; // Input not found
 }
 
-/**
- * @brief Gets the last known value of a specific input channel.
- * @param name The name of the input channel.
- * @return std::optional<std::string> The last value, or std::nullopt if not found or never set.
- */
+
 std::optional<std::string> Machine::getLastInputValue(const std::string& name) const {
     auto it = inputs.find(name);
     if (it != inputs.end()) {
@@ -315,34 +242,20 @@ std::optional<std::string> Machine::getLastInputValue(const std::string& name) c
     return std::nullopt; // Input not found
 }
 
-/**
- * @brief Records that a value was sent to an output channel.
- * Also performs the actual output action (e.g., logging, network send).
- * @param name The name of the output channel.
- * @param value The value that was sent.
- * @return bool True if the output channel was found, false otherwise.
- */
+
 bool Machine::recordOutputValue(const std::string& name, const std::string& value) {
     auto it = outputs.find(name);
     if (it != outputs.end()) {
         it->second->recordSentValue(value);
-        // --- TODO: Implement actual output mechanism here ---
-        // This could involve:
-        // - Logging the output event
-        // - Sending data over a socket (UDP as suggested)
-        // - Emitting a Qt signal for the GUI to display
-        std::cout << "Output [" << name << "] -> " << value << std::endl; // Basic logging for now
-        // --- End of TODO ---
+        
+        std::cout << "Output [" << name << "] -> " << value << std::endl; 
+        
         return true;
     }
     return false; // Output not found
 }
 
-/**
- * @brief Gets the last recorded value sent to a specific output channel.
- * @param name The name of the output channel.
- * @return std::optional<std::string> The last sent value, or std::nullopt if not found or never sent.
- */
+
 std::optional<std::string> Machine::getLastOutputValue(const std::string& name) const {
     auto it = outputs.find(name);
     if (it != outputs.end()) {
