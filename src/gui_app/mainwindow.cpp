@@ -2284,6 +2284,22 @@ void MainWindow::editTransition(QGraphicsItemGroup *item) {
     transition->setCondition(newName);
     transition->setDelay(std::stoi(newAction));
 
+    // --- Aktualizácia grafického prvku ---
+    // 1. Nájdi QGraphicsTextItem v skupine
+    QGraphicsTextItem *textItem = nullptr;
+    for (QGraphicsItem *child : item->childItems()) {
+        textItem = dynamic_cast<QGraphicsTextItem*>(child);
+        if (textItem) {
+            break; // Našli sme ho
+        }
+    }
+
+    if (textItem) {
+        // 2. Zmeň zobrazený text
+        QString newNameQt = QString::fromStdString(newName); // Použi nové meno z dialógu
+        textItem->setPlainText(newNameQt);    
+    }
+
     /*
 
     // --- Aktualizácia grafického prvku ---
