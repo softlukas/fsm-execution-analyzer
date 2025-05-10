@@ -2,7 +2,6 @@
 
 QT += core gui widgets network
 CONFIG += c++17
-# CONFIG += console 
 
 TARGET = AutomationCreator
 TEMPLATE = app
@@ -54,6 +53,9 @@ FORMS += mainwindow.ui
 
 unix:LIBS += -L$$OUT_PWD/../runtime -lifa_runtime
 
+QMAKE_CXXFLAGS += -fsanitize=address -g
+QMAKE_LFLAGS += -fsanitize=address
+CONFIG += console
 
 unix:LIBS += -lpthread
 unix:LIBS += -lstdc++fs
