@@ -2147,13 +2147,13 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
 
 void MainWindow::editTransition(QGraphicsItemGroup *item) {
 
-    int transitionId = item->data(0).toInt(); // Retrieve the state ID stored in the item
+    int transitionId = item->data(1).toInt(); // Retrieve the state ID stored in the item
     Transition* transition = machine->getTransition(transitionId); // Get the state object using the ID
     if (!transition) {
         qDebug() << "State not found for ID:" << transitionId;
         return;
     }
-    
+    qDebug() << "Attempting to edit transition: ID=" << transitionId << " Old condition=" << QString::fromStdString(transition->getCondition());
     std::string currentCondition = transition->getCondition();
    
     std::string newCondition = MainWindowUtils::ProccessEditDialogForTransition("Edit transition condition:", currentCondition);
