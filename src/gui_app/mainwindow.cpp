@@ -2035,11 +2035,6 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
             layout.addWidget(&label1);
             layout.addWidget(&lineEdit1);
 
-            QLabel label2("Enter transition delay:", &dialog);
-            QLineEdit lineEdit2(&dialog);
-            layout.addWidget(&label2);
-            layout.addWidget(&lineEdit2);
-
             QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
             layout.addWidget(&buttonBox);
 
@@ -2047,11 +2042,11 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
             connect(&buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
 
             QString condition;
-            int delay = 0;;
+            int delay = 0;
 
             if (dialog.exec() == QDialog::Accepted) {
                 condition = lineEdit1.text().trimmed();
-                delay = lineEdit2.text().trimmed().toInt();
+                
 
                 if (condition.isEmpty()) {
                     qDebug() << "Dialog cancelled or empty input.";
@@ -2159,24 +2154,16 @@ void MainWindow::editTransition(QGraphicsItemGroup *item) {
         return;
     }
     
+    std::string currentCondition = transition->getCondition();
+   
+    std::string newCondition = MainWindowUtils::ProccessEditDialogForTransition("Enter new transition condition:", currentCondition);
+    if (newCondition.empty()) {
+        qDebug() << "Dialog cancelled or empty input.";
+        return;
+    }
 
-
+    transition->setCondition(newCondition);
     
-    std::string newName;
-    std::string newAction;
-    
-    std::string currentName = transition->getCondition();
-    std::string currentAction = std::to_string(transition->getDelayMs());
-    
-
-    ProccessMultipleArgsInputEditDialog("Edit State", "Enter new state name:", "Enter new action:",
-        currentName, currentAction, &newName, &newAction);
-
-    qDebug () << "New name:" << QString::fromStdString(newName);
-
-    transition->setCondition(newName);
-    transition->setDelay(std::stoi(newAction));
-
     // --- Update graphical element ---
     // Find QGraphicsTextItem in the group
     QGraphicsTextItem *textItem = nullptr;
@@ -2189,8 +2176,8 @@ void MainWindow::editTransition(QGraphicsItemGroup *item) {
 
     if (textItem) {
         // Change displayed text
-        QString newNameQt = QString::fromStdString(newName); // Use new name from dialog
-        textItem->setPlainText(newNameQt);    
+        QString newConditionQt = QString::fromStdString(newCondition); // Use new condition from dialog
+        textItem->setPlainText(newConditionQt); // Change text in GUI
     }
 
     

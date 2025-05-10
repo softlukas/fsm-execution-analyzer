@@ -28,6 +28,20 @@ public:
     static std::string ProccessOneArgumentDialog(const std::string& textToDisplay);
 
     /**
+     * @brief Displays an edit dialog for a transition and processes the user input.
+     * 
+     * This function opens a dialog box to display a given text and allows the user
+     * to edit it. The dialog also provides a default text that can be used as a 
+     * starting point for the user's input. The function returns the processed 
+     * result of the user's input.
+     * 
+     * @param textToDisplay The text to display in the dialog box for user reference.
+     * @param defaultText The default text to pre-fill the input field in the dialog.
+     * @return A string containing the processed user input from the dialog.
+     */
+    static std::string ProccessEditDialogForTransition(const std::string& textToDisplay, const std::string& defaultText);
+
+    /**
      * @brief Draws an arrow between two points on a QGraphicsScene.
      * 
      * This function creates an arrow representation between the specified start and end positions,
@@ -47,5 +61,17 @@ public:
     static QGraphicsItemGroup* drawArrow(const QPointF &startPos, const QPointF &endPos, const QString &label, int transitionId, QGraphicsScene *scene, QPointF *actualStartPos, QPointF *actualEndPos);
 
     
+    /**
+     * @brief Finds a QGraphicsItemGroup in the given QGraphicsScene by its ID and type.
+     * 
+     * This function searches through the items in the provided QGraphicsScene to locate
+     * a QGraphicsItemGroup that matches the specified ID and type. If a matching group
+     * is found, it is returned; otherwise, the function returns nullptr.
+     * 
+     * @param scene Pointer to the QGraphicsScene to search in.
+     * @param id The unique identifier of the QGraphicsItemGroup to find.
+     * @param type The type of the QGraphicsItemGroup as a QString.
+     * @return A pointer to the matching QGraphicsItemGroup if found, or nullptr if no match is found.
+     */
     static QGraphicsItemGroup* findItemGroupByIdAndType(QGraphicsScene* scene, int id, const QString& type);
 };

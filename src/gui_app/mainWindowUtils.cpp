@@ -22,6 +22,33 @@ const qreal STATE_RADIUS = 30.0;
 const qreal ARROW_SIZE = 10.0;
 
 
+std::string MainWindowUtils::ProccessEditDialogForTransition(const std::string& textToDisplay, const std::string& defaultText) {
+
+    QInputDialog dialog;
+    dialog.setWindowTitle("Edit " + QString::fromStdString(textToDisplay));
+    dialog.setLabelText(QString::fromStdString(textToDisplay));
+    dialog.setTextValue(QString::fromStdString(defaultText));
+
+    
+    QFont font = dialog.font();
+    font.setPointSize(16);
+    dialog.setFont(font);
+
+    
+    dialog.setMinimumSize(350, 350);
+
+    
+    if (dialog.exec() == QDialog::Accepted) {
+        QString input = dialog.textValue();
+        if (!input.trimmed().isEmpty()) {
+            return input.trimmed().toStdString();
+        }
+    }
+
+    qDebug() << "Dialog cancelled or empty input.";
+    return "";
+}
+
 
 std::string MainWindowUtils::ProccessOneArgumentDialog(const std::string& textToDisplay) {
 
