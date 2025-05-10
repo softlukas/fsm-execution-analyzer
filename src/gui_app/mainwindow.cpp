@@ -2156,7 +2156,7 @@ void MainWindow::editTransition(QGraphicsItemGroup *item) {
     
     std::string currentCondition = transition->getCondition();
    
-    std::string newCondition = MainWindowUtils::ProccessEditDialogForTransition("Enter new transition condition:", currentCondition);
+    std::string newCondition = MainWindowUtils::ProccessEditDialogForTransition("Edit transition condition:", currentCondition);
     if (newCondition.empty()) {
         qDebug() << "Dialog cancelled or empty input.";
         return;
