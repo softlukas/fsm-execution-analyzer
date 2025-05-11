@@ -9,7 +9,7 @@ ZIP = zip
 BUILD_DIR    = build
 SRC_DIR      = src
 
-ARCHIVE_NAME = submission
+ARCHIVE_NAME = xsimonl00_xsiaket00
 DOC_DIR = doc
 TEMPLATES_DIR = templates
 THIRDPARTY_DIR = third_party
@@ -52,7 +52,7 @@ pack:
 	$(RM) -rf $(ARCHIVE_NAME)/$(DOC_DIR)/html
 	
 	$(TAR) -czf $(ARCHIVE_NAME).tar.gz -C $(ARCHIVE_NAME) . --owner=0 --group=0
-	# $(RM) $(ARCHIVE_NAME)
+	$(RM) $(ARCHIVE_NAME)
 	@echo "<<< Archive created: $(ARCHIVE_NAME).tar.gz"
 
 FORCE:
