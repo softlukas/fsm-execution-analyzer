@@ -22,4 +22,6 @@ HEADERS += \
     ifa_runtime_udp.h \
     ifa_runtime_timers.h
 
+QMAKE_CXXFLAGS += -w
+
 unix:LIBS += -lpthread

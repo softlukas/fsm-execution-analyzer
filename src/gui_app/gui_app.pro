@@ -55,7 +55,10 @@ unix:LIBS += -L$$OUT_PWD/../runtime -lifa_runtime
 
 QMAKE_CXXFLAGS += -fsanitize=address -g
 QMAKE_LFLAGS += -fsanitize=address
+
 CONFIG += console
+
+QMAKE_CXXFLAGS += -w
 
 unix:LIBS += -lpthread
 unix:LIBS += -lstdc++fs
