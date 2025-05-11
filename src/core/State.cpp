@@ -61,12 +61,12 @@
 
 void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup* stateGroup, Machine *machine) {
     
-    qDebug() << "----------------------------------------------------------------";
-    qDebug() << "move method called for state:" << QString::fromStdString(stateName);
-    qDebug() << "----------------------------------------------------------------";
+    //qDebug() << "----------------------------------------------------------------";
+    //qDebug() << "move method called for state:" << QString::fromStdString(stateName);
+    //qDebug() << "----------------------------------------------------------------";
 
-    printTransitions();
-    qDebug() << "----------------------------------------------------------------";
+    //printTransitions();
+    //qDebug() << "----------------------------------------------------------------";
 
     for (const auto& [id, transition] : outgoingTransitions) {
         Transition *trans = machine->getTransition(id);
@@ -79,8 +79,8 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
         const QPointF startPos = getVisualCenterOfStateItem_static(stateGroup);
         const QPointF endPos = std::get<2>(transition);
 
-        qDebug() << "StartPos:" << startPos;
-        qDebug() << "EndPos:" << endPos;
+        //qDebug() << "StartPos:" << startPos;
+        //qDebug() << "EndPos:" << endPos;
 
         if (group && scene->items().contains(group)) {
             scene->removeItem(group);
@@ -97,7 +97,7 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
         if (newTransition) {
             outgoingTransitions[id] = std::make_tuple(newTransition, actualStartPos, actualEndPos);
             targetState->setIncomingTransitionGroup(id, newTransition, actualStartPos, actualEndPos);
-            qDebug() << "Outgoing transition state updated";
+            //qDebug() << "Outgoing transition state updated";
             
         }
     }
@@ -128,7 +128,7 @@ void State::updateTransitionPositions(QGraphicsScene* scene, QGraphicsItemGroup*
            
             sourceState->setOutgoingTransitionGroup(id, newTransition, actualStartPos, actualEndPos);
 
-            qDebug() << "Incoming transition state udpdated";
+            //qDebug() << "Incoming transition state udpdated";
             
         }
     }

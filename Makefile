@@ -23,7 +23,7 @@ GUI_TARGET = $(BUILD_DIR)/src/gui_app/$(GUI_EXEC_NAME)
 all: clean $(GUI_TARGET)
 
 run: all
-	$(GUI_TARGET)
+	$(GUI_TARGET) || true
 
 $(GUI_TARGET): $(MAIN_PRO_FILE) $(SRC_DIR)/**/*.* FORCE
 	@echo ">>> Building project using main SUBDIRS project..."

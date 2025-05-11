@@ -1977,17 +1977,17 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
 
 
     if(!addingTransitionMode) {
-        qDebug() << "handleStateClick called. Not in transition mode.";
+        //qDebug() << "handleStateClick called. Not in transition mode.";
         return;
     }
     
 
-    qDebug() << "handleStateClick called. Adding transition mode:";
-    qDebug() << "State item clicked:" << lineItem->data(0).toString();
+    //qDebug() << "handleStateClick called. Adding transition mode:";
+    //qDebug() << "State item clicked:" << lineItem->data(0).toString();
 
     
 
-    qDebug() << "State item clicked:" << lineItem->data(0).toString();
+    //qDebug() << "State item clicked:" << lineItem->data(0).toString();
 
     // Check if a valid state item was clicked (item is not nullptr)
     
@@ -2086,8 +2086,8 @@ void MainWindow::handleStateClick(QGraphicsItemGroup *item, QGraphicsLineItem *l
             qDebug() << "End state name:" << QString::fromStdString(endStateForTransition->getName());
 
 
-            startStateForTransition->printTransitions();
-            endStateForTransition->printTransitions();
+            //startStateForTransition->printTransitions();
+            //endStateForTransition->printTransitions();
 
             
             qDebug() << "---------------------------------------------------";
