@@ -52,7 +52,7 @@ pack:
 	$(RM) -rf $(ARCHIVE_NAME)/$(DOC_DIR)/html
 	# Vytvor archív
 	$(TAR) -czf $(ARCHIVE_NAME).tar.gz -C $(ARCHIVE_NAME) . --owner=0 --group=0
-	(RM) $(ARCHIVE_NAME)
+	$(RM) $(ARCHIVE_NAME)
 	@echo "<<< Archive created: $(ARCHIVE_NAME).tar.gz"
 
 FORCE:
