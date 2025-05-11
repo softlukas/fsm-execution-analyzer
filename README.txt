@@ -163,7 +163,7 @@ Premenné (Variables):
 Akcie stavov (State Actions):
     Pri definovaní stavu je možné zadať C++ kód, ktorý sa vykoná pri vstupe
     do daného stavu. Tento kód sa vkladá priamo do tela vygenerovanej funkcie.
-    Môžete používať globálne premenné automatu a volať funkcie ktoré som definoval nad týmto textom:
+    Môžete používať globálne premenné automatu a volať funkcie ktoré som definoval nad týmto textom.
 
    Príklad akcie:
     cpp
@@ -175,8 +175,10 @@ Akcie stavov (State Actions):
     
 
 Syntax prechodov (Transitions):
-    Prechod sa definuje medzi dvoma stavmi a jeho správanie je určené textovým
-    popisom, ktorý môže obsahovať až tri časti: udalost [ podmienka_guard ] @ zpozdeni
+    Prechod sa pridáva kliknutím na tlačidlo "Add Transition". Následne je potrebné v scéne kliknúť na dva stavy, 
+    medzi ktorými chceme prechod vytvoriť. Ak chceme prechod zo stavu A do A, dva krát klikneme na rovnaký stav.
+    Správanie prechodu je určené textovým popisom, ktorý môže obsahovať až tri časti: 
+    "udalost [ podmienka ] @ oneskorenie"
     Jednotlivé časti sú voliteľné. Poradie je dôležité.
 
     1.    Udalosť (Event Trigger):
@@ -195,19 +197,19 @@ Syntax prechodov (Transitions):
             Môže byť buď číselná hodnota (v milisekundách) alebo názov globálnej
             premennej automatu (typu int), ktorá obsahuje
             hodnotu oneskorenia.
-            Príklady: @1000 (oneskorenie 1000 ms), @mojeOneskorenie (použije
+            Príklady: @ 1000 (oneskorenie 1000 ms), @ mojeOneskorenie (použije
             hodnotu premennej mojeOneskorenie).
             Ak je prechod spúšťaný udalosťou a má aj oneskorenie, časovač sa
             spustí až po prijatí udalosti a splnení strážnej podmienky.
 
     Príklady kompletnej syntaxe prechodov:
         Okamžitý prechod s podmienkou: [pocitadlo < 3]
-        Časovaný prechod: @500
-        Časovaný prechod s podmienkou: [ flag ] @casovacVar
+        Časovaný prechod: @ 500
+        Časovaný prechod s podmienkou: [ flag ] @ casovacVar
         Prechod spúšťaný udalosťou: START_EVENT
         Prechod spúšťaný udalosťou s podmienkou: DATA_PRIJATE [ valueof("DATA_PRIJATE") != 1 ]
-        Prechod spúšťaný udalosťou s oneskorením: START_TIMER_EVENT @2500
-        Komplexný prechod: AKTIVUJ_SENZOR [ valueof("stavSenzora") == 1 ] @zpozdeniSenzora
+        Prechod spúšťaný udalosťou s oneskorením: START_TIMER_EVENT @ 2500
+        Komplexný prechod: AKTIVUJ_SENZOR [ valueof("stavSenzora") == 1 ] @ zpozdeniSenzora
 
 --------------------------------------------------------------------------------
 Poznámky:

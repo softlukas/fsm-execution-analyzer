@@ -46,13 +46,13 @@ pack:
 	@echo ">>> Creating submission archive: $(ARCHIVE_NAME)..."
 	$(RM) $(ARCHIVE_NAME).tar $(ARCHIVE_NAME).tar.gz $(ARCHIVE_NAME).zip
 	$(MKDIR) $(ARCHIVE_NAME)
-	# Skopíruj potrebné adresáre a súbory
+	
 	cp -r $(SRC_DIR) $(DOC_DIR) $(TEMPLATES_DIR) $(THIRDPARTY_DIR) \
 	Makefile README.txt uml.pdf $(MAIN_PRO_FILE) $(EXAMPLES_DIR) $(ARCHIVE_NAME)
 	$(RM) -rf $(ARCHIVE_NAME)/$(DOC_DIR)/html
-	# Vytvor archív
+	
 	$(TAR) -czf $(ARCHIVE_NAME).tar.gz -C $(ARCHIVE_NAME) . --owner=0 --group=0
-	$(RM) $(ARCHIVE_NAME)
+	# $(RM) $(ARCHIVE_NAME)
 	@echo "<<< Archive created: $(ARCHIVE_NAME).tar.gz"
 
 FORCE:
