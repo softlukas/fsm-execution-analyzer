@@ -9,7 +9,7 @@ ZIP = zip
 BUILD_DIR    = build
 SRC_DIR      = src
 
-ARCHIVE_NAME = xsimonl00_xsiaket00
+ARCHIVE_NAME = xsimonl00-xsiaket00
 DOC_DIR = doc
 TEMPLATES_DIR = templates
 THIRDPARTY_DIR = third_party
